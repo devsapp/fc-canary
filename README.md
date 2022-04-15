@@ -137,7 +137,7 @@ services:
    4. 等待2分钟
    5. 更新别名，为版本 new 分配 100% 流量
 
-![alt](https://img.alicdn.com/imgextra/i4/O1CN017SVPT61ahqK0AHpQG_!!6000000003362-2-tps-2248-488.png)
+![alt](https://img.alicdn.com/imgextra/i1/O1CN01exh14j1Wsb9zOcAIU_!!6000000002844-2-tps-2248-508.png)
 
 ### 多函数发布
 ```yaml
