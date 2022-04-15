@@ -1,11 +1,12 @@
+# Fc-canary Plugin
+本插件帮助您通过 [Serverless-Devs](https://github.com/Serverless-Devs/Serverless-Devs/) 工具和 [FC组件](https://github.com/devsapp/fc/) 实现函数的灰度发布能力
+
 - [快速开始](#快速开始)
   - [基本参数](#基本参数)
   - [灰度策略](#灰度策略)
 - [操作案例](#操作案例)
   - [单函数发布](#单函数发布)
   - [多函数发布](#多函数发布)
-# Fc-canary Plugin
-本插件帮助您通过 [Serverless-Devs](https://github.com/Serverless-Devs/Serverless-Devs/) 工具和 [FC组件](https://github.com/devsapp/fc/) 实现函数的灰度发布能力
 
 ## 快速开始
 在部署钩子post-deploy中声明该插件，实现函数部署后的灰度发布。插件本质上是操作Service的版本以及别名，并且更新涉及别名的Trigger、Custom Domain
