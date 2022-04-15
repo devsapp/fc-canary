@@ -34,12 +34,12 @@ actions:
 
 ### 基本参数
 
-| 参数名称         | 参数含义                                | 必填    | 默认值                    | 例子             |
-|--------------|-------------------------------------|-------|------------------------|----------------|
-| service      | 服务名称。不指定则使用关联组件的 `${serviceName}`   | false | ${serviceName}         | demo-service   |
-| alias        | 别名。 不指定则使用 `${functionName}_stable` | false | ${functionName}_stable | stable         |
-| describtion  | 发布描述。版本及别名都使用该描述                    | false | ''                     | canary testing |
-| baseVersion  | 基线版本。如果指定则使用该版本做为主版本和灰度版本进行切换       | false | null                   | 1              |
+| 参数名称        | 参数含义                                | 必填    | 默认值                            | 例子             |
+|-------------|-------------------------------------|-------|--------------------------------|----------------|
+| service     | 服务名称。不指定则使用关联组件的 `${serviceName}`   | false | 关联组件的 `${serviceName}`         | demo-service   |
+| alias       | 别名。 不指定则使用 `${functionName}_stable` | false | 关联组件的 `${functionName}_stable` | stable         |
+| describtion | 发布描述。版本及别名都使用该描述                    | false | ''                             | canary testing |
+| baseVersion | 基线版本。如果指定则使用该版本做为主版本和灰度版本进行切换       | false | null                           | 1              |
 
 ### 灰度策略
 描述具体的灰度策略，以下参数只能选择一个，如果不指定则不进行灰度，直接将新版本的权重设置成100
