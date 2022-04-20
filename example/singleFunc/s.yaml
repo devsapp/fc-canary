@@ -1,6 +1,6 @@
 edition: 1.0.0 #  命令行YAML规范版本，遵循语义化版本（Semantic Versioning）规范
 name: demo-app #  项目名称
-access: 'default' #  秘钥别名
+access: 'mac0307' #  秘钥别名
 
 vars:
   region: cn-hangzhou
@@ -14,9 +14,10 @@ services:
     component: devsapp/fc
     actions:
       post-deploy: # 在deploy之后运行
-        - plugin: fc-canary
+        - plugin: ${path(../..)}
           args:
             alias: stable
+            baseVersion: 1
             linearStep:
               weight: 10
               interval: 2

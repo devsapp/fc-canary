@@ -1,0 +1,77 @@
+edition: 1.0.0
+name: demo-app
+access: 'default'
+
+vars:
+  region: cn-hangzhou
+  service:
+    name: demo-service
+    logConfig: auto
+    nasConfig: auto
+
+actions: # 全局 action
+  post-deploy: # 在deploy之后运行
+    - plugin: ${path(..)}
+      args:
+        alias: stable
+        describtion: 'test canary'
+        baseVersion: 1 # 指定基线版本
+        canaryPlans: # 自定义灰度
+          - weight: 10
+            intervalMinutes: 5
+          - weight: 30
+            intervalMinutes: 10
+
+services:
+  function-1:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.service}
+      function:
+        handler: index.handler
+        instanceType: e1
+        memorySize: 1024
+        runtime: nodejs12
+        timeout: 60
+        name: demo-function-1
+        codeUri: .
+      triggers:
+        - name: httpTrigger
+          type: http
+          config:
+            authType: anonymous
+            methods:
+              - GET
+      customDomains:
+        - domainName: auto
+          protocol: HTTP
+          routeConfigs:
+            - path: '/*'
+
+
+  function-2:
+    component: devsapp/fc
+    props:
+      region: ${vars.region}
+      service: ${vars.service}
+      function:
+        handler: index.handler
+        instanceType: e1
+        memorySize: 1024
+        runtime: nodejs12
+        timeout: 60
+        name: demo-function-2
+        codeUri: .
+      triggers:
+        - name: httpTrigger
+          type: http
+          config:
+            authType: anonymous
+            methods:
+              - GET
+      customDomains:
+        - domainName: auto
+          protocol: HTTP
+          routeConfigs:
+            - path: '/*'
