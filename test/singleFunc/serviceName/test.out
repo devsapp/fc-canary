@@ -1,0 +1,431 @@
+- Ensuring nas dir...
+
+There is auto config in the service: _FC_NAS_dummy-service-ensure-nas-dir-exist-service
+
+There is auto config in the service: dummy-service
+
+Tips for next step
+======================
+* Display information of the deployed resource: s info
+* Display metrics: s metrics
+* Display logs: s logs
+* Invoke remote function: s invoke
+* Remove Service: s remove service
+* Remove Function: s remove function
+* Remove Trigger: s remove trigger
+* Remove CustomDomain: s remove domain
+
+
+
+[2022-04-22 06:28:55] [INFO] [S-CORE] - Start the after-action
+[2022-04-22 06:28:55] [INFO] [S-CORE] - Action: /Users/nanxuanli/work/plugin/fc-canary
+{
+  "endpoint": "1816647648916833.cn-hangzhou.fc.aliyuncs.com",
+  "accessKeyId": "LTAI5tG35imRmNd5xbWfZhEM",
+  "accessKeySecret": "IhbevfXalCPsdIOgZfEAS5HQ4VMHiu",
+  "regionId": "cn-hangzhou"
+}
+inputs params without credentials: {
+  "props": {
+    "region": "cn-hangzhou",
+    "service": {
+      "name": "dummy-service",
+      "logConfig": "auto",
+      "nasConfig": "auto"
+    },
+    "function": {
+      "handler": "index.handler",
+      "instanceType": "e1",
+      "memorySize": 1024,
+      "runtime": "nodejs12",
+      "timeout": 60,
+      "name": "dummy-function",
+      "codeUri": "."
+    },
+    "triggers": [
+      {
+        "name": "httpTrigger",
+        "type": "http",
+        "config": {
+          "authType": "anonymous",
+          "methods": [
+            "GET"
+          ]
+        }
+      }
+    ],
+    "customDomains": [
+      {
+        "domainName": "auto",
+        "protocol": "HTTP",
+        "routeConfigs": [
+          {
+            "path": "/*"
+          }
+        ]
+      }
+    ]
+  },
+  "credentials": {
+    "Alias": "mac0307",
+    "AccessKeyID": "LTAI5tG35imRmNd5xbWfZhEM",
+    "AccessKeySecret": "IhbevfXalCPsdIOgZfEAS5HQ4VMHiu",
+    "AccountID": "1816647648916833"
+  },
+  "appName": "demo-app",
+  "project": {
+    "component": "devsapp/fc",
+    "access": "mac0307",
+    "projectName": "dummy-function"
+  },
+  "command": "deploy",
+  "args": "-t ./test/singleFunc/serviceName/s-serviceName-not-exist.yaml --use-local",
+  "argsObj": [
+    "-t",
+    "./test/singleFunc/serviceName/s-serviceName-not-exist.yaml",
+    "--use-local"
+  ],
+  "path": {
+    "configPath": "/Users/nanxuanli/work/plugin/fc-canary/test/singleFunc/serviceName/s-serviceName-not-exist.yaml"
+  },
+  "output": {
+    "region": "cn-hangzhou",
+    "service": {
+      "name": "dummy-service"
+    },
+    "function": {
+      "name": "dummy-function",
+      "runtime": "nodejs12",
+      "handler": "index.handler",
+      "memorySize": 1024,
+      "timeout": 60
+    },
+    "url": {
+      "custom_domain": [
+        {
+          "domain": "http://dummy-function.dummy-service.1816647648916833.cn-hangzhou.fc.devsapp.net"
+        }
+      ]
+    },
+    "triggers": [
+      {
+        "type": "http",
+        "name": "httpTrigger"
+      }
+    ]
+  }
+}
+args params: {
+  "service": "test-service123",
+  "alias": "stable",
+  "linearStep": {
+    "weight": 10,
+    "interval": 2
+  }
+}
+✖ Message:
+
+ERROR:
+
+The plugin's service is unequal to service deployed. Name of service in the plugin: test-service123 Name of service deployed: dummy-service
+
+TraceId:     acde480011221650608936556
+Environment: @serverless-devs/s: 2.0.104, core: 0.1.34, s-home: /Users/nanxuanli/.s, darwin-x64, node-v17.7.1
+Documents:   https://www.serverless-devs.com
+Discussions: https://github.com/Serverless-Devs/Serverless-Devs/discussions
+Issues:      https://github.com/Serverless-Devs/Serverless-Devs/issues
+
+Please copy traceId: acde480011221650608936556 and join Dingding group: 33947367 for consultation.
+You can run 's clean --all' to clean Serverless devs.
+
+- Ensuring nas dir...
+
+There is auto config in the service: _FC_NAS_dummy-service-ensure-nas-dir-exist-service
+
+There is auto config in the service: dummy-service
+
+Tips for next step
+======================
+* Display information of the deployed resource: s info
+* Display metrics: s metrics
+* Display logs: s logs
+* Invoke remote function: s invoke
+* Remove Service: s remove service
+* Remove Function: s remove function
+* Remove Trigger: s remove trigger
+* Remove CustomDomain: s remove domain
+
+
+
+[2022-04-22 06:29:08] [INFO] [S-CORE] - Start the after-action
+[2022-04-22 06:29:08] [INFO] [S-CORE] - Action: /Users/nanxuanli/work/plugin/fc-canary
+{
+  "endpoint": "1816647648916833.cn-hangzhou.fc.aliyuncs.com",
+  "accessKeyId": "LTAI5tG35imRmNd5xbWfZhEM",
+  "accessKeySecret": "IhbevfXalCPsdIOgZfEAS5HQ4VMHiu",
+  "regionId": "cn-hangzhou"
+}
+inputs params without credentials: {
+  "props": {
+    "region": "cn-hangzhou",
+    "service": {
+      "name": "dummy-service",
+      "logConfig": "auto",
+      "nasConfig": "auto"
+    },
+    "function": {
+      "handler": "index.handler",
+      "instanceType": "e1",
+      "memorySize": 1024,
+      "runtime": "nodejs12",
+      "timeout": 60,
+      "name": "dummy-function",
+      "codeUri": "."
+    },
+    "triggers": [
+      {
+        "name": "httpTrigger",
+        "type": "http",
+        "config": {
+          "authType": "anonymous",
+          "methods": [
+            "GET"
+          ]
+        }
+      }
+    ],
+    "customDomains": [
+      {
+        "domainName": "auto",
+        "protocol": "HTTP",
+        "routeConfigs": [
+          {
+            "path": "/*"
+          }
+        ]
+      }
+    ]
+  },
+  "credentials": {
+    "Alias": "mac0307",
+    "AccessKeyID": "LTAI5tG35imRmNd5xbWfZhEM",
+    "AccessKeySecret": "IhbevfXalCPsdIOgZfEAS5HQ4VMHiu",
+    "AccountID": "1816647648916833"
+  },
+  "appName": "demo-app",
+  "project": {
+    "component": "devsapp/fc",
+    "access": "mac0307",
+    "projectName": "dummy-function"
+  },
+  "command": "deploy",
+  "args": "-t ./test/singleFunc/serviceName/s-serviceName-success.yaml --use-local",
+  "argsObj": [
+    "-t",
+    "./test/singleFunc/serviceName/s-serviceName-success.yaml",
+    "--use-local"
+  ],
+  "path": {
+    "configPath": "/Users/nanxuanli/work/plugin/fc-canary/test/singleFunc/serviceName/s-serviceName-success.yaml"
+  },
+  "output": {
+    "region": "cn-hangzhou",
+    "service": {
+      "name": "dummy-service"
+    },
+    "function": {
+      "name": "dummy-function",
+      "runtime": "nodejs12",
+      "handler": "index.handler",
+      "memorySize": 1024,
+      "timeout": 60
+    },
+    "url": {
+      "custom_domain": [
+        {
+          "domain": "http://dummy-function.dummy-service.1816647648916833.cn-hangzhou.fc.devsapp.net"
+        }
+      ]
+    },
+    "triggers": [
+      {
+        "type": "http",
+        "name": "httpTrigger"
+      }
+    ]
+  }
+}
+args params: {
+  "service": "dummy-service",
+  "alias": "stable",
+  "linearStep": {
+    "weight": 10,
+    "interval": 2
+  }
+}
+[ { weight: 10, interval: 2 } ]
+[2022-04-22 06:29:09] [INFO] [S-CORE] - End the after-action
+[J[1mdummy-function: [22m
+  [1mregion: [22m  cn-hangzhou
+  [1mservice: [22m
+    [1mname: [22mdummy-service
+  [1mfunction: [22m
+    [1mname: [22m      dummy-function
+    [1mruntime: [22m   nodejs12
+    [1mhandler: [22m   index.handler
+    [1mmemorySize: [22m[34m1024[39m
+    [1mtimeout: [22m   [34m60[39m
+  [1murl: [22m
+    [1mcustom_domain: [22m
+      [32m- [39m
+        [1mdomain: [22mhttp://dummy-function.dummy-service.1816647648916833.cn-hangzhou.fc.devsapp.net
+  [1mtriggers: [22m
+    [32m- [39m
+      [1mtype: [22mhttp
+      [1mname: [22mhttpTrigger
+
+- Ensuring nas dir...
+
+There is auto config in the service: _FC_NAS_dummy-service-ensure-nas-dir-exist-service
+
+There is auto config in the service: dummy-service
+
+Tips for next step
+======================
+* Display information of the deployed resource: s info
+* Display metrics: s metrics
+* Display logs: s logs
+* Invoke remote function: s invoke
+* Remove Service: s remove service
+* Remove Function: s remove function
+* Remove Trigger: s remove trigger
+* Remove CustomDomain: s remove domain
+
+
+
+[2022-04-22 06:29:21] [INFO] [S-CORE] - Start the after-action
+[2022-04-22 06:29:21] [INFO] [S-CORE] - Action: /Users/nanxuanli/work/plugin/fc-canary
+{
+  "endpoint": "1816647648916833.cn-hangzhou.fc.aliyuncs.com",
+  "accessKeyId": "LTAI5tG35imRmNd5xbWfZhEM",
+  "accessKeySecret": "IhbevfXalCPsdIOgZfEAS5HQ4VMHiu",
+  "regionId": "cn-hangzhou"
+}
+inputs params without credentials: {
+  "props": {
+    "region": "cn-hangzhou",
+    "service": {
+      "name": "dummy-service",
+      "logConfig": "auto",
+      "nasConfig": "auto"
+    },
+    "function": {
+      "handler": "index.handler",
+      "instanceType": "e1",
+      "memorySize": 1024,
+      "runtime": "nodejs12",
+      "timeout": 60,
+      "name": "dummy-function",
+      "codeUri": "."
+    },
+    "triggers": [
+      {
+        "name": "httpTrigger",
+        "type": "http",
+        "config": {
+          "authType": "anonymous",
+          "methods": [
+            "GET"
+          ]
+        }
+      }
+    ],
+    "customDomains": [
+      {
+        "domainName": "auto",
+        "protocol": "HTTP",
+        "routeConfigs": [
+          {
+            "path": "/*"
+          }
+        ]
+      }
+    ]
+  },
+  "credentials": {
+    "Alias": "mac0307",
+    "AccessKeyID": "LTAI5tG35imRmNd5xbWfZhEM",
+    "AccessKeySecret": "IhbevfXalCPsdIOgZfEAS5HQ4VMHiu",
+    "AccountID": "1816647648916833"
+  },
+  "appName": "demo-app",
+  "project": {
+    "component": "devsapp/fc",
+    "access": "mac0307",
+    "projectName": "dummy-function"
+  },
+  "command": "deploy",
+  "args": "-t ./test/singleFunc/serviceName/s-serviceName-undefined.yaml --use-local",
+  "argsObj": [
+    "-t",
+    "./test/singleFunc/serviceName/s-serviceName-undefined.yaml",
+    "--use-local"
+  ],
+  "path": {
+    "configPath": "/Users/nanxuanli/work/plugin/fc-canary/test/singleFunc/serviceName/s-serviceName-undefined.yaml"
+  },
+  "output": {
+    "region": "cn-hangzhou",
+    "service": {
+      "name": "dummy-service"
+    },
+    "function": {
+      "name": "dummy-function",
+      "runtime": "nodejs12",
+      "handler": "index.handler",
+      "memorySize": 1024,
+      "timeout": 60
+    },
+    "url": {
+      "custom_domain": [
+        {
+          "domain": "http://dummy-function.dummy-service.1816647648916833.cn-hangzhou.fc.devsapp.net"
+        }
+      ]
+    },
+    "triggers": [
+      {
+        "type": "http",
+        "name": "httpTrigger"
+      }
+    ]
+  }
+}
+args params: {
+  "alias": "stable",
+  "linearStep": {
+    "weight": 10,
+    "interval": 2
+  }
+}
+[ { weight: 10, interval: 2 } ]
+[2022-04-22 06:29:22] [INFO] [S-CORE] - End the after-action
+[J[1mdummy-function: [22m
+  [1mregion: [22m  cn-hangzhou
+  [1mservice: [22m
+    [1mname: [22mdummy-service
+  [1mfunction: [22m
+    [1mname: [22m      dummy-function
+    [1mruntime: [22m   nodejs12
+    [1mhandler: [22m   index.handler
+    [1mmemorySize: [22m[34m1024[39m
+    [1mtimeout: [22m   [34m60[39m
+  [1murl: [22m
+    [1mcustom_domain: [22m
+      [32m- [39m
+        [1mdomain: [22mhttp://dummy-function.dummy-service.1816647648916833.cn-hangzhou.fc.devsapp.net
+  [1mtriggers: [22m
+    [32m- [39m
+      [1mtype: [22mhttp
+      [1mname: [22mhttpTrigger
+

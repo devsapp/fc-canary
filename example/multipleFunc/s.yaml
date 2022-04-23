@@ -1,17 +1,17 @@
 edition: 1.0.0
 name: demo-app
-access: 'default'
+access: 'mac0307'
 
 vars:
   region: cn-hangzhou
   service:
-    name: demo-service
+    name: dummy-service
     logConfig: auto
     nasConfig: auto
 
 actions: # 全局 action
   post-deploy: # 在deploy之后运行
-    - plugin: ${path(..)}
+    - plugin: ${path(../..)}
       args:
         alias: stable
         describtion: 'test canary'
@@ -52,6 +52,7 @@ services:
 
   function-2:
     component: devsapp/fc
+    actions: ${actions}
     props:
       region: ${vars.region}
       service: ${vars.service}

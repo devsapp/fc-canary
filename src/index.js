@@ -1,7 +1,6 @@
-const core = require('@serverless-devs/core');
-const {validateArgs} = require("./validate/argsValidate");
-const {lodash, Logger} = core;
-const logger = new Logger('fc-canary');
+const {singleFunc} = require('./helper/singleFunctionHelper');
+
+
 
 /**
  * Plugin 插件入口
@@ -12,71 +11,17 @@ const logger = new Logger('fc-canary');
  */
 
 module.exports = async function index(inputs, args = {}) {
+  let isSingleFunction = true;
 
-    // afterDeployParams will be used in the life circle of the plugin
-    const afterDeployParams = lodash.assign({}, inputs);
-
-    // delete the credentials before log
-    delete (inputs.credentials);
-    logger.log(`inputs params without credentials: ${JSON.stringify(inputs, null, 2)}`);
-    logger.log(`args params: ${JSON.stringify(args, null, 2)}`);
-
-    const {
-        service = `${serviceName}`,
-        alias = `${functionName}_stable`,
-        description = '',
-        baseVersion = null,
-        canaryStep ,
-        canaryWeight,
-        canaryPlans,
-        linearStep
-    } = args;
-
-    logger.log(`service: ${service}\n` + `alias: ${alias}\n` + `description: ${description}\n` + `baseVersion: ${baseVersion}\n` + `canaryStep: ${JSON.stringify(canaryStep, null, 2)}\n` + `canaryWeight: ${JSON.stringify(canaryWeight, null, 2)}\n` + `linearStep: ${JSON.stringify(linearStep, null, 2)}\n` + `canaryPlans: ${JSON.stringify(canaryPlans, null, 2)}`);
-
-    // delete conflict params
-    deleteConflictParams(afterDeployParams);
-
-    // validate args
-    await validateArgs(afterDeployParams, args, logger);
-
-
-
-
-
-
+  if (isSingleFunction) {
+    await singleFunc(inputs, args);
+  } else {
+    // todo multiple function
+  }
 };
 
 
-/**
- * FC component uses typescript, and the format of the input is fixed;
- * delete conflict params
- *
- * FC input interface:
- *
- * export interface IInputs {
- *     properties?: any;
- *     credentials?: any;
- *     project?: {
- *         projectName?: string;
- *         component?: string;
- *         provider?: string;
- *         accessAlias?: string;
- *     };
- *     command?: string;
- *     args?: string;
- *     state?: object;
- *     path?: {
- *         configPath?: string;
- *     };
- * }
- *
- * @param afterDeployParams
- */
-function deleteConflictParams(afterDeployParams) {
-    delete (afterDeployParams.appName);
-    delete (afterDeployParams.project.access);
-    delete (afterDeployParams.output);
-    delete (afterDeployParams.argsObj);
-}
+
+
+
 
