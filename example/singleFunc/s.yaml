@@ -41,3 +41,7 @@ services:
           protocol: HTTP
           routeConfigs:
             - path: '/*'
+        - domainName: wordpress.web-framework.1816647648916833.cn-hangzhou.fc.devsapp.net
+          protocol: HTTP
+          routeConfigs:
+            - path: '/*'

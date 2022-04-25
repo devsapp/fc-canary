@@ -1,7 +1,6 @@
-const _ = require("lodash");
+const _ = require('lodash');
 
 class FunctionHelper {
-
   constructor(helper, logger) {
     this.helper = helper;
     this.logger = logger;
@@ -9,18 +8,29 @@ class FunctionHelper {
 
   /**
    *
-   * @param service
+   * @param serviceName
    * @param description
    * @returns {Promise<*>}
    */
-  async publishVersion(service, description) {
-    const versionPublishedResponse = await this.helper.publishVersion(service, description);
-    if (versionPublishedResponse === undefined || versionPublishedResponse.body === undefined || versionPublishedResponse.body.versionId === undefined) {
-      throw new Error(`No response from the system when publish version, serviceName: ${service}, description: ${description}, please contact staff.`);
+  async publishVersion(serviceName, description) {
+    this.logger.log(`Begin to publish version, serviceName: ${serviceName}`);
+    const response = await this.helper.publishVersion(serviceName, description);
+    if (
+      response !== undefined &&
+      response.body !== undefined &&
+      response.body.versionId !== undefined &&
+      !isNaN(response.body.versionId)
+    ) {
+      return parseInt(response.body.versionId);
     }
-    return versionPublishedResponse.body.versionId;
-
-
+    throw new Error(
+      `Publish version response doesn't include versionId, please contact the staff. ServiceName: ${serviceName}` +
+        ` description: ${description}, Publish version response: ${JSON.stringify(
+          response,
+          null,
+          2,
+        )}`,
+    );
   }
 
   /**
@@ -32,99 +42,245 @@ class FunctionHelper {
    * @param baseVersion
    * @param aliasName
    * @param serviceName
-   * @param aliasVersion
+   * @param newCreatedVersion
    * @returns {Promise<*>}
    */
-  async findBaseVersion(baseVersion, aliasName, serviceName, aliasVersion) {
+  async findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion) {
+    if (baseVersion === null) {
+      // if alias is valid, let current alise version to be baseVersion.
+      const getAliasResponse = await this.getAlias(serviceName, aliasName);
+
+      // if aliasName exists, set the version of the aliasName to baseVersion
+      if (getAliasResponse !== undefined) {
+        if (isNaN(getAliasResponse.body.versionId)) {
+          throw new Error(
+            `VersionId in getAliasResponse is not a number. AliasName: ${aliasName}, ServiceName: ${serviceName}, ` +
+              `getAliasResponse: ${JSON.stringify(getAliasResponse, null, 2)}`,
+          );
+        }
+        baseVersion = getAliasResponse.body.versionId;
+      } else {
+        // if aliasName doesn't exist, set the previous version of new created aliasName version to baseVersion
+        const versionListResponse = await this.helper.listVersion(serviceName);
+        if (versionListResponse === undefined || versionListResponse.body === undefined) {
+          throw new Error(
+            `Get undefined response when list versions, please contact the staff, service: ${serviceName}`,
+          );
+        }
+        const versionList = versionListResponse.body && versionListResponse.body.versions;
+
+        this.logger.log(`Current versions are ${JSON.stringify(versionList, null, 2)}`);
+
+        if (
+          versionList === null ||
+          versionList === undefined ||
+          versionList.constructor.name !== 'Array' ||
+          (versionList.constructor.name === 'Array' && _.isEmpty(versionList))
+        ) {
+          throw new Error(
+            `New published version has been deleted, versionId: ${newCreatedVersion}`,
+          );
+        }
+
+        // if versionList only contains one version and the versionId equals to newCreatedVersion,
+        // it defers to user would like to fully release. warn user that there service will fully release
+        if (versionList.length === 1) {
+          if (versionList[0].versionId !== newCreatedVersion) {
+            throw new Error(
+              `New published version has been deleted, versionId: ${newCreatedVersion}`,
+            );
+          }
+        }
+        // set the previous version of new created aliasName version to baseVersion
+        if (versionList.length > 1) {
+          if (versionList.find((item) => item.versionId === newCreatedVersion) === undefined) {
+            throw new Error(
+              `New published version has been deleted, versionId: ${newCreatedVersion}`,
+            );
+          } else {
+            // versionList is sorted decreasingly.
+            const index = versionList.findIndex((item) => item.versionId === newCreatedVersion);
+            if (index === versionList.length - 1) {
+              throw new Error(
+                `New created version is the oldest version, can't find a baseVersion`,
+              );
+            } else {
+              baseVersion = versionList[index + 1].versionId;
+            }
+          }
+        }
+      }
+      return baseVersion;
+    } else {
+      // after argsValidate, if baseVersion is not undefined, it must be a valid version.
+      return baseVersion;
+    }
+  }
+
+  async createAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
+    this.logger.log(`Begin to create a new Alias. AliasName: ${aliasName}`);
+    const createAliasResponse = await this.helper.createAlias(
+      serviceName,
+      baseVersion.toString(),
+      aliasName,
+      description,
+      newCreatedVersion.toString(),
+      weight,
+    );
+    if (createAliasResponse === undefined || createAliasResponse.body === undefined) {
+      throw new Error(
+        `System error in creating alias, please contact the staff, service: ${serviceName}, alias: ${aliasName}`,
+      );
+    }
+    if (createAliasResponse.body.aliasName !== aliasName) {
+      throw new Error(
+        `Create alias Error, response alias name: ${createAliasResponse.body.aliasName}, expected alias name: ${aliasName}`,
+      );
+    }
+  }
+
+  async updateAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
+    this.logger.log(`Begin to update a new Alias. AliasName: ${aliasName}`);
+    const updateAliasResponse = await this.helper.updateAlias(
+      serviceName,
+      baseVersion.toString(),
+      aliasName,
+      description,
+      newCreatedVersion.toString(),
+      weight,
+    );
+    if (updateAliasResponse === undefined || updateAliasResponse.body === undefined) {
+      throw new Error(
+        `System error in updating alias, please contact the staff, service: ${serviceName}, alias: ${aliasName}`,
+      );
+    }
+    if (updateAliasResponse.body.aliasName !== aliasName) {
+      throw new Error(
+        `Create alias Error, response alias name: ${updateAliasResponse.body.aliasName}, expected alias name: ${aliasName}`,
+      );
+    }
+  }
+
+  async getAlias(serviceName, aliasName) {
+    this.logger.log(`Begin to get an Alias. AliasName: ${aliasName}`);
     let getAliasResponse;
     try {
-
       getAliasResponse = await this.helper.getAlias(serviceName, aliasName);
-      if (getAliasResponse === undefined || getAliasResponse.body === undefined) {
-        throw new Error(`No response from the system when finding alias,` +
-          ` serviceName: ${serviceName}, aliasName: ${aliasName}, please contact staff.`);
+      if (
+        getAliasResponse === undefined ||
+        getAliasResponse.body === undefined ||
+        getAliasResponse.body.versionId === undefined
+      ) {
+        throw new Error(
+          `Response is undefined when finding alias,` +
+            ` serviceName: ${serviceName}, aliasName: ${aliasName}, please contact staff.`,
+        );
       }
     } catch (e) {
       // if Alias not found, the system will throw an error.
       if (e.message.indexOf('AliasNotFound') !== -1) {
-        this.logger.log(`Alias ${aliasName} doesn't exist, we will create alias ${aliasName}, service: ${service}`);
+        this.logger.log(
+          `Alias ${aliasName} doesn't exist, we will create alias ${aliasName}, service: ${serviceName}`,
+        );
       } else {
         throw e;
       }
     }
-    // if aliasName exists, set the version of the aliasName to baseVersion
-    if (getAliasResponse !== undefined) {
-      baseVersion = getAliasResponse.body && getAliasResponse.body.versionId;
-
-    } else {
-      // if aliasName doesn't exist, set the previous version of new created aliasName version to baseVersion
-      const versionListResponse = await this.helper.listVersion(serviceName);
-      if (versionListResponse === undefined || versionListResponse.body === undefined) {
-        this.logger.log(`System error in listing versions, please contact the staff, service: ${serviceName}`);
-      }
-      const versionList = versionListResponse.body && versionListResponse.body.versions;
-
-      this.logger(`Current versions are ${JSON.stringify(versionList, null, 2)}`);
-
-      if (versionList === null || versionList === undefined ||  (versionList.constructor.name !== 'Array' && _.isEmpty(versionList))) {
-        throw new Error(`New published version has been deleted, versionId: ${aliasVersion}`);
-      }
-
-      // if versionList only contains one version and the versionId equals to aliasVersion,
-      // it defers to user would like to fully release. warn user that there service will fully release
-      if (versionList.length == 1) {
-        if (versionList[0].versionId !== aliasVersion) {
-          throw new Error(`New published version has been deleted, versionId: ${aliasVersion}`);
-        }
-
-
-        // full to aliasName
-        // // 用户此时删除了version怎么办？ 抛错误
-        // this.logger.log(`Begin to create a new aliasName`);
-        // const createAliasResponse = await this.helper.createAlias(service, null, aliasName, description, grayVersion.toString(), 100);
-        // if (createAliasResponse === undefined || createAliasResponse.body === undefined) {
-        //   throw new Error(`System error in creating aliasName, please contact the staff, service: ${service}, aliasName: ${aliasName}`);
-        // }
-        //
-        // if (createAliasResponse.body.aliasName !== aliasName) {
-        //   throw new Error(`Create aliasName Error, response aliasName name: ${createAliasResponse.body.aliasName}, expected aliasName name: ${aliasName}`);
-        // }
-      }
-      // set the previous version of new created aliasName version to baseVersion
-      if (versionList.length > 1) {
-        if (versionList.find(item => item.versionId === aliasVersion) === undefined) {
-          throw new Error(`New published version has been deleted, versionId: ${aliasVersion}`);
-        } else {
-          versionList.sort((a, b) => {
-            const aDate = new Date(a.lastModifiedTime);
-            const bDate = new Date(b.lastModifiedTime);
-            if (aDate.before(bDate)) {
-              return -1;
-            } else if (aDate.after(bDate)) {
-              return 1;
-            } else {
-              return 0;
-            }
-          });
-          const index = versionList.findIndex(item => item.versionId === aliasVersion);
-          if (index <= 0) {
-            throw new Error(`New created version is the oldest version, can't find a baseVersion`);
-          } else {
-            baseVersion = versionList[index - 1].versionId;
-          }
-        }
-
-
-      }
-
-
-    }
-
-
-    return baseVersion;
+    return getAliasResponse;
   }
 
+  async updateTriggerListByAlias(triggers, functionName, aliasName, serviceName) {
+    this.logger.log(
+      `Begin to update triggers, serviceName: ${serviceName}, functionName: ${functionName}, aliasName: ${aliasName}`,
+    );
+    for (const item of triggers) {
+      const response = await this.helper.updateTriggerAlias(
+        serviceName,
+        functionName,
+        item.triggerName,
+        aliasName,
+      );
+      if (
+        response === undefined ||
+        response.body === undefined ||
+        response.body.qualifier !== aliasName
+      ) {
+        throw new Error(
+          `Update trigger with new alias failed.` +
+            ` triggerName: ${item.triggerName}, functionName: ${item.functionName}, ` +
+            `serviceName: ${serviceName}, alias name: ${aliasName}`,
+        );
+      }
+    }
+  }
 
+  /**
+   *
+   * @param serviceName
+   * @param customDomainList
+   *        [
+   *        {
+   *          "domain": "xxxxxx"
+   *        },
+   *        {
+   *          "domain": "xxxxxx"
+   *        }
+   *        ]
+   * @param aliasName
+   * @param functionName
+   * @returns {Promise<void>}
+   */
+  async updateCustomDomainListByAlias(serviceName, customDomainList, aliasName, functionName) {
+    this.logger.log(`Begin to update the custom domains of service ${serviceName}}`);
+    if (customDomainList.constructor.name !== 'Array') {
+      throw new Error(
+        `Parameter CustomDomainList is not a array, ` +
+          `type of customDomainList: ${customDomainList.constructor.name} ` +
+          `customDomainList: ${customDomainList}`,
+      );
+    }
+    for (const item of customDomainList) {
+      const response = await this.helper.getCustomDomain(item.domain);
+      if (response === undefined || response.body === undefined) {
+        throw new Error(
+          `System error in getting a customDomain, please contact the staff, custom domain name: ${item.domain}`,
+        );
+      }
+      const routes = response.body.routeConfig.routes;
+      for (const route of routes) {
+        if (route.serviceName === serviceName && route.functionName === functionName) {
+          route.qualifier = aliasName;
+        }
+      }
+      const updateCustomDomainResponse = await this.helper.updateCustomDomain(item.domain, routes);
+      if (
+        updateCustomDomainResponse === undefined ||
+        updateCustomDomainResponse.body === undefined ||
+        updateCustomDomainResponse.body.routeConfig === undefined ||
+        updateCustomDomainResponse.body.routeConfig.routes === undefined
+      ) {
+        throw new Error(`Update custom domain error, custom domain name: ${item.domain}`);
+      }
+      // check if update successfully.
+      const routesResponse = updateCustomDomainResponse.body.routeConfig.routes;
+      if (
+        _.isEmpty(routesResponse) !== _.isEmpty(routes) &&
+        routes.length !== routesResponse.length
+      ) {
+        throw new Error(
+          `Update custom domain error, the number of updated domains is not equal to the number of domains required to be updated. ` +
+            `routes updated: ${routesResponse.length}, routes required to be updated: ${routes.length}`,
+        );
+      }
+      for (const route of routesResponse) {
+        if (route.qualifier !== aliasName) {
+          throw new Error(
+            `Update custom domain error, the qualifier (also called alias) is not updated`,
+          );
+        }
+      }
+    }
+  }
 }
 
 module.exports = {FunctionHelper: FunctionHelper};

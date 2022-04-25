@@ -18,6 +18,9 @@ module.exports = async function index(inputs, args = {}) {
   } else {
     // todo multiple function
   }
+
+  delete inputs.output;
+  return inputs;
 };
 
 
