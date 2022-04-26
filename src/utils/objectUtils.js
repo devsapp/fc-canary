@@ -1,9 +1,6 @@
+const util = require('util')
 function printObject(object) {
-  let output = '';
-  for (const property in object) {
-    output += '  ' + property + ': ' + object[property]+';\n';
-  }
-  return output;
+  return util.inspect(object, false, null, true /* enable colors */);
 }
 
 module.exports = {printObject};

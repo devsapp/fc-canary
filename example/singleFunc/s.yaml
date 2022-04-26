@@ -10,11 +10,17 @@ services:
       post-deploy: # 在deploy之后运行
         - plugin: ${path(../..)}
           args:
-            alias: stable
-            baseVersion: 10
-            linearStep:
-              weight: 10
-              interval: 2
+            alias: test
+            baseVersion: 18
+#            canaryStep: # 灰度20%流量，10分钟后灰度剩余80%流量
+#              weight: 20
+#              interval: 10
+            canaryWeight: 15 #手动灰度，指定时直接将灰度版本设置对应的权重
+#            canaryPlans: #自定义灰度
+#              - weight: 10
+#                intervalMinutes: 5
+#              - weight: 30
+#                intervalMinutes: 10
     props:
       region: cn-hangzhou
       service:
@@ -28,7 +34,7 @@ services:
         runtime: nodejs12
         timeout: 60
         name: dummy-function
-        codeUri: .
+        codeUri: ./code
       triggers:
         - name: httpTrigger
           type: http

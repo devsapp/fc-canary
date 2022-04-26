@@ -1,5 +1,5 @@
-const { FunctionHelper } = require('./FunctionHelper');
-const { FcHelper } = require('./FcHelper');
+const { FunctionHelper } = require('../bin/FunctionHelper');
+const { FcHelper } = require('../bin/FcHelper');
 const Console = require('console');
 
 

@@ -1,4 +1,4 @@
-const {singleFunc} = require('./helper/singleFunctionHelper');
+const {singleFunc} = require('./lib/singleFunction');
 
 
 

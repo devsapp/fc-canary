@@ -197,7 +197,7 @@ class FunctionHelper {
       const response = await this.helper.updateTriggerAlias(
         serviceName,
         functionName,
-        item.triggerName,
+        item.name,
         aliasName,
       );
       if (
@@ -231,7 +231,7 @@ class FunctionHelper {
    * @returns {Promise<void>}
    */
   async updateCustomDomainListByAlias(serviceName, customDomainList, aliasName, functionName) {
-    this.logger.log(`Begin to update the custom domains of service ${serviceName}}`);
+    this.logger.log(`Begin to update the custom domains of service ${serviceName}`);
     if (customDomainList.constructor.name !== 'Array') {
       throw new Error(
         `Parameter CustomDomainList is not a array, ` +
@@ -240,10 +240,18 @@ class FunctionHelper {
       );
     }
     for (const item of customDomainList) {
-      const response = await this.helper.getCustomDomain(item.domain);
+      if (item.domain === undefined ) {
+        throw new Error(
+          'custom domain name is undefined. Please check the custom domain configs'
+        )
+      }
+      const regex = /^https?\:\/\//i;
+      const domainName = item.domain.replace(regex, "");
+      this.logger.log(`Begin to update custom domain: ${domainName}`);
+      const response = await this.helper.getCustomDomain(domainName);
       if (response === undefined || response.body === undefined) {
         throw new Error(
-          `System error in getting a customDomain, please contact the staff, custom domain name: ${item.domain}`,
+          `System error in getting a customDomain, please contact the staff, custom domain name: ${domainName}`,
         );
       }
       const routes = response.body.routeConfig.routes;
@@ -252,14 +260,14 @@ class FunctionHelper {
           route.qualifier = aliasName;
         }
       }
-      const updateCustomDomainResponse = await this.helper.updateCustomDomain(item.domain, routes);
+      const updateCustomDomainResponse = await this.helper.updateCustomDomain(domainName, routes);
       if (
         updateCustomDomainResponse === undefined ||
         updateCustomDomainResponse.body === undefined ||
         updateCustomDomainResponse.body.routeConfig === undefined ||
         updateCustomDomainResponse.body.routeConfig.routes === undefined
       ) {
-        throw new Error(`Update custom domain error, custom domain name: ${item.domain}`);
+        throw new Error(`Update custom domain error, custom domain name: ${domainName}`);
       }
       // check if update successfully.
       const routesResponse = updateCustomDomainResponse.body.routeConfig.routes;

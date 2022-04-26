@@ -18,7 +18,7 @@ async function fullyReleaseHelper(
       aliasName,
       description,
       newCreatedVersion,
-      100,
+      1,
     );
   } else {
     await functionHelper.updateAlias(
@@ -27,7 +27,7 @@ async function fullyReleaseHelper(
       aliasName,
       description,
       newCreatedVersion,
-      100,
+      1,
     );
   }
 

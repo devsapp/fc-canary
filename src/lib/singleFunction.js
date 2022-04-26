@@ -1,8 +1,8 @@
-const { FcHelper } = require('./FcHelper');
+const { FcHelper } = require('../bin/FcHelper');
 const { printObject } = require('../utils/objectUtils');
-const { validateArgs, validateCanaryStrategy } = require('../validate/validateArgs');
-const { FunctionHelper } = require('./FunctionHelper');
-const { canaryWeightHelper, fullyReleaseHelper } = require('./canaryHelper');
+const { validateArgs, validateCanaryStrategy } = require('./validate/validateArgs');
+const { FunctionHelper } = require('../bin/FunctionHelper');
+const { canaryWeightHelper, fullyReleaseHelper } = require('./canaryWeight');
 const { Logger } = require('@serverless-devs/core');
 const logger = new Logger('fc-canary');
 const _ = require('lodash');
@@ -28,12 +28,12 @@ async function singleFunc(inputs, args) {
   // todo delete the credentials before log
   // delete (inputs.credentials);
   logger.log(`inputs params without credentials: ${JSON.stringify(inputs, null, 2)}`);
-  logger.log(`args params: {\n${printObject(args)}}`);
+  logger.log(`args params: ${printObject(args)}`);
 
   // validate args
-  await validateArgs(inputs, fcHelper);
+  await validateArgs(inputs, args, logger, fcHelper);
 
-  const functionName = inputs.function && inputs.function.name;
+  const functionName = inputs.props && inputs.props.function && inputs.props.function.name;
   const serviceName = inputs.props && inputs.props.service && inputs.props.service.name;
   const { triggers = [] } = inputs.props;
 
@@ -105,7 +105,7 @@ async function singleFunc(inputs, args) {
         aliasName,
         triggers,
         functionName,
-        strategy.value,
+        strategy.value / 100,
         customDomainList,
         logger
       );

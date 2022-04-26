@@ -48,14 +48,14 @@ class FcHelper {
       request = new CreateAliasRequest({
         aliasName: aliasName,
         description: description,
-        additionalVersionWeight: { newCreatedVersion: weight },
+        additionalVersionWeight: { [newCreatedVersion]: weight }
       });
     } else {
       request = new CreateAliasRequest({
         aliasName: aliasName,
         description: description,
         versionId: baseVersion,
-        additionalVersionWeight: { newCreatedVersion: weight },
+        additionalVersionWeight: { [newCreatedVersion]: weight },
       });
     }
 
@@ -78,22 +78,20 @@ class FcHelper {
     if (baseVersion === null) {
       // if there is no baseVersionId, fully release.
       request = new UpdateAliasRequest({
-        aliasName: aliasName,
         description: description,
-        additionalVersionWeight: { newCreatedVersion: weight },
+        additionalVersionWeight: {[newCreatedVersion]: weight}
       });
     } else {
       request = new UpdateAliasRequest({
-        aliasName: aliasName,
-        description: description,
         versionId: baseVersion,
-        additionalVersionWeight: { newCreatedVersion: weight },
+        description: description,
+        additionalVersionWeight: {[newCreatedVersion]: weight}
       });
     }
 
     this.logger.log(`Update alias request: ${JSON.stringify(request, null, 2)}`);
 
-    const response = await this.client.updateAlias(serviceName, request);
+    const response = await this.client.updateAlias(serviceName, aliasName, request);
     this.logger.log(`Update alias response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }

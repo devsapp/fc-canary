@@ -27,3 +27,8 @@ roll-back-dev:
 	git restore --staged publish.yaml
 	git restore publish.yaml
 
+
+test-all:
+	n
+
+

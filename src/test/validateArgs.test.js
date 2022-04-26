@@ -1,10 +1,10 @@
-const { validateArgs, validateCanaryStrategy } = require('./validateArgs');
+const { validateArgs, validateCanaryStrategy } = require('../lib/validate/validateArgs');
 const console = require('console');
-const { FcHelper } = require('../helper/FcHelper');
+const { FcHelper } = require('../bin/FcHelper');
 let inputs;
 let args;
 
-jest.mock('../helper/FcHelper');
+jest.mock('../bin/FcHelper');
 
 jest.mock('@alicloud/fc-open20210406');
 describe('Test validateArgs', () => {
