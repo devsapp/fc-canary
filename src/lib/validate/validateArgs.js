@@ -5,7 +5,7 @@ async function validateArgs(inputs, args, logger, fcHelper) {
 
   // check whether service in the plugin args is equal to the service deployed.
   let curService;
-  if (service !== undefined) {
+  if (service != undefined) {
     const serviceDeployed =
       inputs && inputs.props && inputs.props.service && inputs.props.service.name;
     if (serviceDeployed !== service) {
@@ -21,7 +21,7 @@ async function validateArgs(inputs, args, logger, fcHelper) {
     logger.log(`Current serviceName: ${curService}`);
   }
 
-  if (baseVersion !== undefined) {
+  if (baseVersion != undefined) {
     await validateBaseVersion(curService, baseVersion, fcHelper, logger);
   }
 }
@@ -50,13 +50,15 @@ function validateCanaryStrategy(args, logger) {
   if (argsKeys.includes('linearStep')) {
     grayList.push('linearStep');
   }
-  logger.log(`User input grayscale strategies: ${JSON.stringify(grayList)}`);
+  logger.debug(`User input canary policy: ${JSON.stringify(grayList)}`);
+
   if (grayList.length === 0) {
-    if (args.baseVersion !== undefined) {
-      throw new Error(`Can't set baseVersion if you don't use grayscale release.`);
+    if (args.baseVersion !== null) {
+      logger.warn(
+        `We found that you didn't select the canary policy, so it defaults to a full release. With a full release, even if baseVersion is set, the codes will still be released at the newly created version.`,
+      );
     }
 
-    logger.warn('No grayscale strategy specified, The new version will not use Grayscale Release');
     response.key = 'full';
     response.value = 100;
   } else if (grayList.length > 1) {
@@ -160,24 +162,27 @@ function validateCanaryStrategy(args, logger) {
 async function validateBaseVersion(serviceName, baseVersion, helper, logger) {
   if (isNaN(baseVersion)) {
     throw new Error(
-      `baseVersion is not number, baseVersion: ${baseVersion}, typeof baseVersion: ${typeof baseVersion}`,
+      `BaseVersion is not number, baseVersion: ${baseVersion}, typeof baseVersion: ${typeof baseVersion}`,
     );
   }
 
-  const response = await helper.listVersion(serviceName);
-  if (response === undefined || response.body === undefined) {
+  const response = await helper.listVersion(serviceName, 1, baseVersion.toString());
+
+  if (response == undefined || response.body == undefined) {
     throw new Error(
       `No response from the system when validate versions, serviceName: ${serviceName}, please contact staff.`,
     );
   }
-  const versionList = response.body.versions === undefined ? [] : response.body.versions;
-  const versionIdList = versionList.map((version) => {
-    return version.versionId;
-  });
-  logger.log(`current VersionIds: ${versionIdList.toString()}`);
-  if (!versionIdList.includes(baseVersion.toString())) {
-    throw new Error(`baseVersion in args doesn't exist. baseVersion: ${baseVersion}`);
+
+  if (
+    response.body.versions.length != 1 ||
+    response.body.versions[0].versionId !== baseVersion.toString()
+  ) {
+    throw new Error(
+      `BaseVersion is not valid. baseVersion: ${baseVersion}, serviceName: ${serviceName}`,
+    );
   }
 }
+
 
 module.exports = { validateArgs, validateCanaryStrategy };

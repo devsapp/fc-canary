@@ -16,11 +16,11 @@ describe('all', () =>{
     test('baseVersion === null, if alias exists, baseVersion should be alias version', async () => {
       baseVersion = null;
       FcHelper.prototype.getAlias = jest.fn().mockImplementation(() => ({
-        body: { versionId: 3 },
+        body: { versionId: '3' },
       }));
       expect(
         await helper.findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion),
-      ).toBe(3);
+      ).toBe('3');
     });
 
     test("baseVersion === null, if alias doesn't exist, baseVersion should be one version before newCreatedVersion", async () => {
@@ -29,11 +29,11 @@ describe('all', () =>{
         throw new Error('AliasNotFound');
       });
       FcHelper.prototype.listVersion = jest.fn().mockImplementation(() => ({
-        body: { versions: [{ versionId: 5 }, { versionId: 4 }, { versionId: 3 }, { versionId: 2 }] },
+        body: { versions: [{ versionId: '4' }, { versionId: '3' }] },
       }));
       expect(
         await helper.findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion),
-      ).toBe(3);
+      ).toBe('3');
     });
 
     test("baseVersion === null, if alias doesn't exist, baseVersion should be one version before newCreatedVersion, but newCreatedVersion is missing", async () => {
@@ -42,12 +42,12 @@ describe('all', () =>{
         throw new Error('AliasNotFound');
       });
       FcHelper.prototype.listVersion = jest.fn().mockImplementation(() => ({
-        body: { versions: [{ versionId: 5 }, { versionId: 3 }, { versionId: 2 }, { versionId: 1 }] },
+        body: { versions: [{ versionId: '5' }, { versionId: '3' }] },
       }));
       await expect(
         helper.findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion),
       ).rejects.toThrowError(
-        `New published version has been deleted, versionId: ${newCreatedVersion}`,
+        `New created version: ${newCreatedVersion} has been deleted.`,
       );
     });
 
@@ -57,7 +57,7 @@ describe('all', () =>{
         throw new Error('AliasNotFound');
       });
       FcHelper.prototype.listVersion = jest.fn().mockImplementation(() => ({
-        body: { versions: [{ versionId: 5 }, { versionId: 4 }] },
+        body: { versions: [{ versionId: '4' }] },
       }));
       await expect(
         helper.findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion),
@@ -65,10 +65,10 @@ describe('all', () =>{
     });
 
     test('baseVersion !== null, if alias exist or not, baseVersion should be direct return', async () => {
-      baseVersion = 5;
+      baseVersion = '5';
       expect(
         await helper.findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion),
-      ).toEqual(5);
+      ).toEqual('5');
     });
   });
 

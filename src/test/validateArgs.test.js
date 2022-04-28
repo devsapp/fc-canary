@@ -10,7 +10,7 @@ jest.mock('@alicloud/fc-open20210406');
 describe('Test validateArgs', () => {
   describe('Function: validateArgs', () => {
     FcHelper.prototype.listVersion = jest.fn().mockImplementation(() => ({
-      body: { versions: [{ versionId: '1' }, { versionId: '2' }, { versionId: '3' }] },
+      body: { versions: [{ versionId: '1' }] },
     }));
 
     beforeEach(() => {
@@ -138,8 +138,9 @@ describe('Test validateArgs', () => {
 
     test('args baseVersion不是有效的', async () => {
       args.baseVersion = 10;
+      args.service = 'dummy-service';
       await expect(validateArgs(inputs, args, console, new FcHelper())).rejects.toThrowError(
-        `baseVersion in args doesn't exist. baseVersion: ${args.baseVersion}`,
+        `BaseVersion is not valid. baseVersion: ${args.baseVersion}, serviceName: ${args.service}`,
       );
     });
 

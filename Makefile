@@ -1,9 +1,6 @@
 .PHONY: push
 
 CURRENT_BRANCH_NAME := $(shell git symbolic-ref --short HEAD)
-VERSION_TEST_PATH := "./test/singleFunc/baseVersion/"
-SERVICE_NAME_TEST_PATH := "./test/singleFunc/serviceName/"
-GRAYSCALE_PARAMS_TEST_PATH := "./test/singleFunc/grayscale/"
 add:
 	git add .
 

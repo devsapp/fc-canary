@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const { CreateAliasRequest, UpdateAliasRequest } = require('@alicloud/fc-open20210406');
 
 class FunctionHelper {
   constructor(helper, logger) {
@@ -13,7 +14,7 @@ class FunctionHelper {
    * @returns {Promise<*>}
    */
   async publishVersion(serviceName, description) {
-    this.logger.log(`Begin to publish version, serviceName: ${serviceName}`);
+    this.logger.info(`Begin to publish version, serviceName: ${serviceName}`);
     const response = await this.helper.publishVersion(serviceName, description);
     if (
       response !== undefined &&
@@ -45,6 +46,7 @@ class FunctionHelper {
    * @param newCreatedVersion
    * @returns {Promise<*>}
    */
+  // todo list 有问题
   async findBaseVersion(baseVersion, aliasName, serviceName, newCreatedVersion) {
     if (baseVersion === null) {
       // if alias is valid, let current alise version to be baseVersion.
@@ -60,73 +62,69 @@ class FunctionHelper {
         }
         baseVersion = getAliasResponse.body.versionId;
       } else {
-        // if aliasName doesn't exist, set the previous version of new created aliasName version to baseVersion
-        const versionListResponse = await this.helper.listVersion(serviceName);
-        if (versionListResponse === undefined || versionListResponse.body === undefined) {
-          throw new Error(
-            `Get undefined response when list versions, please contact the staff, service: ${serviceName}`,
-          );
-        }
-        const versionList = versionListResponse.body && versionListResponse.body.versions;
-
-        this.logger.log(`Current versions are ${JSON.stringify(versionList, null, 2)}`);
+        const getVersionResponse = await this.helper.listVersion(
+          serviceName,
+          2,
+          newCreatedVersion.toString(),
+        );
 
         if (
-          versionList === null ||
-          versionList === undefined ||
-          versionList.constructor.name !== 'Array' ||
-          (versionList.constructor.name === 'Array' && _.isEmpty(versionList))
+          getVersionResponse === undefined ||
+          getVersionResponse.body === undefined ||
+          getVersionResponse.body.versions === undefined ||
+          getVersionResponse.body.versions.constructor.name !== 'Array'
         ) {
           throw new Error(
-            `New published version has been deleted, versionId: ${newCreatedVersion}`,
+            `Response from listVersion is undefined, serviceName: ${serviceName}, newCreatedVersion: ${newCreatedVersion}. please contact the staff`,
           );
         }
 
-        // if versionList only contains one version and the versionId equals to newCreatedVersion,
-        // it defers to user would like to fully release. warn user that there service will fully release
-        if (versionList.length === 1) {
-          if (versionList[0].versionId !== newCreatedVersion) {
-            throw new Error(
-              `New published version has been deleted, versionId: ${newCreatedVersion}`,
-            );
-          }
-        }
-        // set the previous version of new created aliasName version to baseVersion
-        if (versionList.length > 1) {
-          if (versionList.find((item) => item.versionId === newCreatedVersion) === undefined) {
-            throw new Error(
-              `New published version has been deleted, versionId: ${newCreatedVersion}`,
-            );
+        const versionIdList = getVersionResponse.body.versions;
+        if (
+          versionIdList.length === 0 ||
+          versionIdList[0].versionId !== newCreatedVersion.toString()
+        ) {
+          throw new Error(`New created version: ${newCreatedVersion} has been deleted.`);
+        } else {
+          if (versionIdList.length === 1) {
+            throw new Error(`New created version is the oldest version, can't find a baseVersion`);
           } else {
-            // versionList is sorted decreasingly.
-            const index = versionList.findIndex((item) => item.versionId === newCreatedVersion);
-            if (index === versionList.length - 1) {
-              throw new Error(
-                `New created version is the oldest version, can't find a baseVersion`,
-              );
-            } else {
-              baseVersion = versionList[index + 1].versionId;
-            }
+            baseVersion = versionIdList[1].versionId;
           }
         }
       }
-      return baseVersion;
     } else {
-      // after argsValidate, if baseVersion is not undefined, it must be a valid version.
-      return baseVersion;
+      baseVersion = baseVersion.toString();
     }
+
+    // after argsValidate, if baseVersion is not undefined, it must be a valid version.
+    return baseVersion;
   }
 
   async createAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
+    if (baseVersion === undefined || baseVersion === null) {
+      throw new Error('To create an alias, you must specify the baseVersion.');
+    }
+    let request;
+
+    // if newCreatedVersion === undefined, it means it is fully release.
+    if (newCreatedVersion == undefined) {
+      request = new CreateAliasRequest({
+        aliasName: aliasName,
+        description: description,
+        versionId: baseVersion.toString(),
+      });
+    } else {
+      request = new CreateAliasRequest({
+        aliasName: aliasName,
+        description: description,
+        versionId: baseVersion.toString(),
+        additionalVersionWeight: { [newCreatedVersion]: weight },
+      });
+    }
+
     this.logger.log(`Begin to create a new Alias. AliasName: ${aliasName}`);
-    const createAliasResponse = await this.helper.createAlias(
-      serviceName,
-      baseVersion.toString(),
-      aliasName,
-      description,
-      newCreatedVersion.toString(),
-      weight,
-    );
+    const createAliasResponse = await this.helper.createAlias(serviceName, request);
     if (createAliasResponse === undefined || createAliasResponse.body === undefined) {
       throw new Error(
         `System error in creating alias, please contact the staff, service: ${serviceName}, alias: ${aliasName}`,
@@ -140,15 +138,29 @@ class FunctionHelper {
   }
 
   async updateAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
-    this.logger.log(`Begin to update a new Alias. AliasName: ${aliasName}`);
-    const updateAliasResponse = await this.helper.updateAlias(
-      serviceName,
-      baseVersion.toString(),
-      aliasName,
-      description,
-      newCreatedVersion.toString(),
-      weight,
-    );
+    let request;
+    if (baseVersion == undefined) {
+      // if there is no baseVersionId, fully release.
+      request = new UpdateAliasRequest({
+        description: description,
+        additionalVersionWeight: { [newCreatedVersion]: weight },
+      });
+    } else {
+      if (newCreatedVersion == undefined) {
+        request = new UpdateAliasRequest({
+          versionId: baseVersion.toString(),
+          description: description,
+        });
+      } else {
+        request = new UpdateAliasRequest({
+          versionId: baseVersion.toString(),
+          description: description,
+          additionalVersionWeight: { [newCreatedVersion]: weight },
+        });
+      }
+    }
+    this.logger.log(`Begin to update a Alias. AliasName: ${aliasName}`);
+    const updateAliasResponse = await this.helper.updateAlias(serviceName, aliasName, request);
     if (updateAliasResponse === undefined || updateAliasResponse.body === undefined) {
       throw new Error(
         `System error in updating alias, please contact the staff, service: ${serviceName}, alias: ${aliasName}`,
@@ -240,13 +252,11 @@ class FunctionHelper {
       );
     }
     for (const item of customDomainList) {
-      if (item.domain === undefined ) {
-        throw new Error(
-          'custom domain name is undefined. Please check the custom domain configs'
-        )
+      if (item.domain === undefined) {
+        throw new Error('custom domain name is undefined. Please check the custom domain configs');
       }
       const regex = /^https?\:\/\//i;
-      const domainName = item.domain.replace(regex, "");
+      const domainName = item.domain.replace(regex, '');
       this.logger.log(`Begin to update custom domain: ${domainName}`);
       const response = await this.helper.getCustomDomain(domainName);
       if (response === undefined || response.body === undefined) {
@@ -291,4 +301,4 @@ class FunctionHelper {
   }
 }
 
-module.exports = {FunctionHelper: FunctionHelper};
+module.exports = { FunctionHelper: FunctionHelper };

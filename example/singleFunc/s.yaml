@@ -1,3 +1,62 @@
+#edition: 1.0.0 #  命令行YAML规范版本，遵循语义化版本（Semantic Versioning）规范
+#name: demo-app #  项目名称
+#access: 'mac0307' #  秘钥别名
+#
+#
+#services:
+#  dummy-function:
+#    component: devsapp/fc
+#    actions:
+#      post-deploy: # 在deploy之后运行
+#        - plugin: ${path(../..)}
+#          args:
+##            alias: test1
+##            canaryStep:
+##              weight: 20
+##              interval: 0.1
+##            canaryWeight: 15 #手动灰度，指定时直接将灰度版本设置对应的权重
+##            canaryPlans: #自定义灰度
+##              - weight: 10
+##                interval: 1
+##              - weight: 30
+##                interval: 1
+##            linearStep:
+##                weight: 60
+##                interval: 0.5
+#    props:
+#      region: cn-hangzhou
+#      service:
+#        name: test-new
+#        logConfig: auto
+#        nasConfig: auto
+#      function:
+#        handler: index.handler
+#        instanceType: e1
+#        memorySize: 1024
+#        runtime: nodejs12
+#        timeout: 60
+#        name: dummy-function
+#        codeUri: ./code
+#      triggers:
+#        - name: httpTrigger
+#          type: http
+#          config:
+#            authType: anonymous
+#            methods:
+#              - GET
+#      customDomains:
+#        - domainName: auto
+#          protocol: HTTP
+#          routeConfigs:
+#            - path: '/*'
+#        - domainName: wordpress.web-framework.1816647648916833.cn-hangzhou.fc.devsapp.net
+#          protocol: HTTP
+#          routeConfigs:
+#            - path: '/index'
+
+
+
+
 edition: 1.0.0 #  命令行YAML规范版本，遵循语义化版本（Semantic Versioning）规范
 name: demo-app #  项目名称
 access: 'mac0307' #  秘钥别名
@@ -6,25 +65,10 @@ access: 'mac0307' #  秘钥别名
 services:
   dummy-function:
     component: devsapp/fc
-    actions:
-      post-deploy: # 在deploy之后运行
-        - plugin: ${path(../..)}
-          args:
-            alias: test
-            baseVersion: 18
-#            canaryStep: # 灰度20%流量，10分钟后灰度剩余80%流量
-#              weight: 20
-#              interval: 10
-            canaryWeight: 15 #手动灰度，指定时直接将灰度版本设置对应的权重
-#            canaryPlans: #自定义灰度
-#              - weight: 10
-#                intervalMinutes: 5
-#              - weight: 30
-#                intervalMinutes: 10
     props:
       region: cn-hangzhou
       service:
-        name: dummy-service
+        name: test-new
         logConfig: auto
         nasConfig: auto
       function:
@@ -43,11 +87,7 @@ services:
             methods:
               - GET
       customDomains:
-        - domainName: auto
-          protocol: HTTP
-          routeConfigs:
-            - path: '/*'
         - domainName: wordpress.web-framework.1816647648916833.cn-hangzhou.fc.devsapp.net
           protocol: HTTP
           routeConfigs:
-            - path: '/*'
+            - path: '/index'
