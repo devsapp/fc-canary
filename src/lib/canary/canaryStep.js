@@ -12,7 +12,7 @@ async function canaryStepHelper(
   customDomainList,
   logger,
 ) {
-  const grayWeight = strategy.weight / 100;
+  const canaryWeight = strategy.weight / 100;
   const interval = strategy.interval;
 
   // alias
@@ -23,7 +23,7 @@ async function canaryStepHelper(
       aliasName,
       description,
       newCreatedVersion,
-      grayWeight,
+      canaryWeight,
     );
   } else {
     await functionHelper.updateAlias(
@@ -32,7 +32,7 @@ async function canaryStepHelper(
       aliasName,
       description,
       newCreatedVersion,
-      grayWeight,
+      canaryWeight,
     );
   }
 
@@ -48,10 +48,10 @@ async function canaryStepHelper(
   );
 
   logger.info(
-    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${Math.round(grayWeight * 100)} % to canaryVersion`,
+    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${Math.round(canaryWeight * 100)} % to canaryVersion`,
   );
 
-  if (grayWeight === 1) {
+  if (canaryWeight === 1) {
     logger.info('Already preform a full release, stop.');
     return;
   }

@@ -10,7 +10,7 @@ async function canaryWeightHelper(
   aliasName,
   triggers,
   functionName,
-  grayWeight,
+  canaryWeight,
   customDomainList,
   logger,
 ) {
@@ -22,7 +22,7 @@ async function canaryWeightHelper(
       aliasName,
       description,
       newCreatedVersion,
-      grayWeight,
+      canaryWeight,
     );
   } else {
     await functionHelper.updateAlias(
@@ -31,7 +31,7 @@ async function canaryWeightHelper(
       aliasName,
       description,
       newCreatedVersion,
-      grayWeight,
+      canaryWeight,
     );
   }
 
@@ -46,7 +46,7 @@ async function canaryWeightHelper(
     functionName,
   );
 
-  logger.info(`Successfully do canaryWeight release, ${100 - Math.round(grayWeight * 100)}% traffic to baseVersion: [${baseVersion}], ${Math.round(grayWeight * 100)}% traffic to new created version: [${newCreatedVersion}].`);
+  logger.info(`Successfully do canaryWeight release, ${100 - Math.round(canaryWeight * 100)}% traffic to baseVersion: [${baseVersion}], ${Math.round(canaryWeight * 100)}% traffic to new created version: [${newCreatedVersion}].`);
 }
 
 module.exports = {

@@ -12,10 +12,10 @@ async function linerStepHelper(
   customDomainList,
   logger,
 ) {
-  const grayWeight = strategy.weight / 100;
+  const canaryWeight = strategy.weight / 100;
   const interval = strategy.interval;
 
-  let weightCount = grayWeight;
+  let weightCount = canaryWeight;
 
   // alias
   if (getAliasResponse === undefined) {
@@ -58,7 +58,7 @@ async function linerStepHelper(
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
   await sleep(60000 * interval);
-  weightCount = (weightCount * 3 + grayWeight * 3) / 3;
+  weightCount = (weightCount * 3 + canaryWeight * 3) / 3;
   while (weightCount < 1) {
     await functionHelper.updateAlias(
       argService,
@@ -74,7 +74,7 @@ async function linerStepHelper(
       }% to canaryVersion`,
     );
 
-    weightCount = (weightCount * 3 + grayWeight * 3) / 3;
+    weightCount = (weightCount * 3 + canaryWeight * 3) / 3;
     await sleep(60000 * interval);
   }
 
