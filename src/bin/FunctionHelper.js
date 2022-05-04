@@ -325,7 +325,7 @@ class FunctionHelper {
           process.exit(1);
         }
       }
-      this.logger.info(`Successfully updated custom domain: [${domainName}] by setting alias: [${aliasName}]`);
+      this.logger.info(`Successfully updated custom domain: [${domainName}] by setting alias: [${aliasName}].`);
     }
     this.logger.debug(
       `Finish updating custom domains.`,

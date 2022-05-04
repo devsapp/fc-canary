@@ -44,7 +44,7 @@ async function fullyReleaseHelper(
     functionName,
   );
 
-  logger.info(`Successfully preformed a full release, 100% traffic to version [${newCreatedVersion}]`);
+  logger.info(`Successfully preformed a full release, 100% traffic to version [${newCreatedVersion}].`);
 }
 
 module.exports = {

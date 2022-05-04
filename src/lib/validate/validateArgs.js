@@ -142,7 +142,7 @@ function validateCanaryPolicy(args, logger) {
     // begin validate the strategy
     const canaryPolicyName = policies[0];
     // only canaryPlans input is an array.
-    logger.info(canaryPolicyName);
+    logger.info(`Canary Policy: [${canaryPolicyName}].`);
 
     if (canaryPolicyName === 'canaryPlans') {
       // each plan in canaryPlans can't have a weight > 100

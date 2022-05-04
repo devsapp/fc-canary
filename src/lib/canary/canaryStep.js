@@ -48,7 +48,7 @@ async function canaryStepHelper(
   );
 
   logger.info(
-    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${Math.round(canaryWeight * 100)} % to canaryVersion`,
+    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${Math.round(canaryWeight * 100)} % to canaryVersion.`,
   );
 
   if (canaryWeight === 1) {
@@ -70,7 +70,7 @@ async function canaryStepHelper(
     1,
   );
 
-  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion`,);
+  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion.`);
 }
 
 module.exports = {

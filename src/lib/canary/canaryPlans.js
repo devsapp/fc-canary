@@ -53,7 +53,7 @@ async function canaryPlansHelper(
       logger.info(
         `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
           Math.round(canaryWeight * 100)
-        }% to canaryVersion`,
+        }% to canaryVersion.`,
       );
       await sleep(60000 * interval);
     } else {
@@ -71,7 +71,7 @@ async function canaryPlansHelper(
       logger.info(
         `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
           Math.round(canaryWeight * 100)
-        }% to canaryVersion`,
+        }% to canaryVersion.`,
       );
       await sleep(60000 * interval);
     }
@@ -85,7 +85,7 @@ async function canaryPlansHelper(
     1,
   );
   logger.info(
-    `Successfully preform canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: 100% to canaryVersion`,
+    `Successfully preform canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: 100% to canaryVersion.`,
   );
 }
 

@@ -52,7 +52,7 @@ async function linerStepHelper(
   logger.info(
     `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
       Math.round(weightCount * 100)
-    }% to canaryVersion`,
+    }% to canaryVersion.`,
   );
 
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -71,7 +71,7 @@ async function linerStepHelper(
     logger.info(
       `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
         Math.round(weightCount * 100)
-      }% to canaryVersion`,
+      }% to canaryVersion.`,
     );
 
     weightCount = (weightCount * 3 + canaryWeight * 3) / 3;
@@ -87,7 +87,7 @@ async function linerStepHelper(
     1,
   );
 
-  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion`,);
+  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion.`,);
 }
 
 module.exports = {

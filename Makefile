@@ -25,7 +25,5 @@ roll-back-dev:
 	git restore publish.yaml
 
 
-test-all:
-	n
 
 
