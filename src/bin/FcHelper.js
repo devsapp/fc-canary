@@ -27,10 +27,13 @@ class FcHelper {
         return await this.client[fnName](...args);
       } catch (e) {
         if (e.code === 'ECONNRESET') {
-          this.logger.warn('An ECONNRESET exception occurred');
+          this.logger.debug('An ECONNRESET exception occurred, using the retry strategy to fix the exception.');
 
+        } else if (e.message.indexOf('AliasNotFound') !== -1) {
+          throw e;
         } else {
-          throw new Error(e);
+          this.logger.error(e);
+          process.exit(1);
         }
       }
     }
@@ -39,65 +42,69 @@ class FcHelper {
   async listVersion(serviceName, Limit, startKey) {
     const request = new ListServiceVersionsRequest({ limit: Limit, startKey: startKey });
     try {
-      this.logger.debug(`Begin to list the versions.`);
-      // const response = await this.client.listServiceVersions(serviceName, request);
+      this.logger.debug(`Begin to list the versions of service: [${serviceName}].`);
       const response = await this.retry('listServiceVersions', serviceName, request);
 
-      this.logger.log(`ListVersion response: ${JSON.stringify(response, null, 2)}`);
+      this.logger.debug(`ListVersion response: ${JSON.stringify(response, null, 2)}`);
 
       return response;
     } catch (e) {
-      throw new Error(e);
+      this.logger.error(e);
+      process.exit(1);
     }
   }
 
   async publishVersion(serviceName, description) {
     const request = new PublishServiceVersionRequest({ description });
     try {
-      this.logger.log(
+      this.logger.debug(
         `Publish version request: ${JSON.stringify(request, null, 2)}, service: ${serviceName} `,
       );
-      // const response = await this.client.publishServiceVersion(serviceName, request);
       const response = await this.retry('publishServiceVersion', serviceName, request);
-      this.logger.log(`Publish version response: ${JSON.stringify(response, null, 2)}`);
+      this.logger.debug(`Publish version response: ${JSON.stringify(response, null, 2)}`);
       return response;
     } catch (e) {
-      throw new Error(e);
+
+      this.logger.error(e);
+      process.exit(1);
     }
   }
 
   async createAlias(serviceName, request) {
-    this.logger.log(`Create alias request: ${JSON.stringify(request, null, 2)}`);
+    this.logger.debug(`Create alias request: ${JSON.stringify(request, null, 2)}`);
 
-    // const response = await this.client.createAlias(serviceName, request);
     const response = await this.retry('createAlias', serviceName, request);
-    this.logger.log(`Create alias response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Create alias response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }
 
   async getAlias(serviceName, aliasName) {
-    this.logger.log(`Get alias serviceName: ${serviceName}, aliasName: ${aliasName}`);
-    // const response = await this.client.getAlias(serviceName, aliasName);
-    const response = await this.retry('getAlias', serviceName, aliasName);
-    this.logger.log(`Get alias response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Get alias request, serviceName: [${serviceName}], aliasName: [${aliasName}]`);
+    let response;
+    try {
+      response =  await this.retry('getAlias', serviceName, aliasName);
+    } catch (e) {
+
+      throw e;
+    }
+    this.logger.debug(`Get alias response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }
 
   async updateAlias(serviceName, aliasName, request) {
-    this.logger.log(`Update alias request: ${JSON.stringify(request, null, 2)}`);
+    this.logger.debug(`Update alias request: ${JSON.stringify(request, null, 2)}`);
 
-    // const response = await this.client.updateAlias(serviceName, aliasName, request);
     const response = await this.retry('updateAlias', serviceName, aliasName, request);
-    this.logger.log(`Update alias response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Update alias response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }
 
   async updateTriggerAlias(serviceName, functionName, triggerName, aliasName) {
     const request = new UpdateTriggerRequest({ qualifier: aliasName });
-    this.logger.log(
-      `Update Trigger Alias: serviceName: ${serviceName},` +
-        ` functionName: ${functionName}, triggerName: ${triggerName},` +
-        ` aliasName: ${aliasName}, request: ${JSON.stringify(request, null, 2)}`,
+    this.logger.debug(
+      `Update Trigger Alias: serviceName: [${serviceName}],` +
+      ` functionName: [${functionName}], triggerName: [${triggerName}],` +
+      ` aliasName: [${aliasName}], request: ${JSON.stringify(request, null, 2)}`,
     );
     const response = await this.retry(
       'updateTrigger',
@@ -106,30 +113,36 @@ class FcHelper {
       triggerName,
       request,
     );
-    this.logger.log(`Update trigger response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Update trigger response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }
 
   async getCustomDomain(domain) {
-    this.logger.log(`Get custom domain: ${domain}`);
-    // const response = await this.client.getCustomDomain(domain);
-    const response = await this.retry('getCustomDomain', domain);
-    this.logger.log(`Get custom domain response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Get custom domain: [${domain}]`);
+    let response;
+    try {
+      response = await this.retry('getCustomDomain', domain);
+    } catch (e) {
+      if (e.message.includes('DomainNameNotFound')) {
+        this.logger.error(`Failed to check custom domain: [${domain}], domain not found.`);
+        process.exit(1);
+      }
+    }
+    this.logger.debug(`Get custom domain response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }
 
   async updateCustomDomain(domainName, routes) {
     const request = new UpdateCustomDomainRequest({ routeConfig: { routes: routes } });
-    this.logger.log(
+    this.logger.debug(
       `Update custom domain request: ${JSON.stringify(
         request,
         null,
         2,
-      )}, domainName: ${domainName}`,
+      )}, domainName: [${domainName}]`,
     );
-    // const response = await this.client.updateCustomDomain(domainName, request);
     const response = await this.retry('updateCustomDomain', domainName, request);
-    this.logger.log(`Update custom domain response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Update custom domain response: ${JSON.stringify(response, null, 2)}`);
     return response;
   }
 }

@@ -47,21 +47,19 @@ async function canaryStepHelper(
     functionName,
   );
 
-  logger.log(
-    `Successfully do the first part of canaryStep, baseVersion: ${baseVersion}, canaryVersion: ${newCreatedVersion}. Weight: ${grayWeight * 100} % to canaryVersion`,
+  logger.info(
+    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${Math.round(grayWeight * 100)} % to canaryVersion`,
   );
 
   if (grayWeight === 1) {
-    logger.log('Already fully release, stop.');
+    logger.info('Already preform a full release, stop.');
     return;
   }
-  logger.log(`Waiting for fully release.`);
 
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
   await sleep(60000 * interval);
 
-  logger.log(`Begin fully release.`);
 
   await functionHelper.updateAlias(
     argService,
@@ -71,6 +69,8 @@ async function canaryStepHelper(
     newCreatedVersion,
     1,
   );
+
+  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion`,);
 }
 
 module.exports = {

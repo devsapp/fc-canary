@@ -1,101 +1,199 @@
 const _ = require('lodash');
 
+/**
+ * except for checking args and inputs,
+ * this function also check canary policy and parse it into variable policy and return
+ * @param logger
+ * @param serviceName
+ * @param functionName
+ * @param inputs
+ * @param args
+ * @param fcHelper
+ * @returns {Promise<*>}
+ */
+async function validateAllParamsAndParseCanaryPolicy(
+  logger,
+  serviceName,
+  functionName,
+  inputs,
+  args,
+  fcHelper,
+) {
+  let policy;
+  await logger.task('Checking', [
+    {
+      title: 'Checking inputs',
+      id: 'inputs',
+      task: async () => {
+        if (serviceName == undefined) {
+          logger.error(`Missing service name in inputs`);
+          process.exit(1);
+        }
+        if (functionName == undefined) {
+          logger.error(`Missing function name in inputs`);
+          process.exit(1);
+        }
+      },
+    },
+    {
+      title: 'Checking args',
+      id: 'args',
+      task: async () => {
+        await validateArgs(inputs, args, logger, fcHelper);
+      },
+    },
+    {
+      title: 'Checking canary policy',
+      id: 'canary policy',
+      task: async () => {
+        // check user's canary strategy.
+        policy = validateCanaryPolicy(args, logger);
+        if (_.isEmpty(policy)) {
+          this.logger.error(
+            `Failed to parse the canary policy. Please double-check the configuration.`,
+          );
+          process.exit(1);
+        }
+      },
+    },
+    {
+      title: 'Checking custom domains',
+      id: 'custom domains',
+      task: async () => {
+        // check user's custom_domain.
+        const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
+        if (customDomainList.constructor.name !== 'Array') {
+          logger.error(`Failed to parse custom domains.`);
+          process.exit(1);
+        }
+        await sleep(50);
+      },
+    },
+  ]);
+  return policy;
+}
+
 async function validateArgs(inputs, args, logger, fcHelper) {
   const { service, baseVersion } = args;
-
+  let baseVersionArgs = baseVersion;
+  if (baseVersionArgs != undefined) {
+    baseVersionArgs = baseVersionArgs.toString();
+  }
   // check whether service in the plugin args is equal to the service deployed.
   let curService;
   if (service != undefined) {
     const serviceDeployed =
       inputs && inputs.props && inputs.props.service && inputs.props.service.name;
     if (serviceDeployed !== service) {
-      throw new Error(
-        `The plugin's service is unequal to service deployed. ` +
-          `Name of service in the plugin: ${service}` +
-          ` Name of service deployed: ${serviceDeployed}`,
+      logger.error(
+        `The service names in args [${service}] and inputs [${serviceDeployed}] are not the same.`,
       );
+      process.exit(1);
     }
     curService = service;
   } else {
     curService = _.get(inputs, 'props.service.name');
-    logger.log(`Current serviceName: ${curService}`);
   }
 
-  if (baseVersion != undefined) {
-    await validateBaseVersion(curService, baseVersion, fcHelper, logger);
+  if (baseVersionArgs != undefined) {
+    await validateBaseVersion(curService, baseVersionArgs, fcHelper, logger);
   }
 }
 
 /**
- * Grayscale Strategy, only one of the following parameters can be selected, if not specified then no grayscale
+ * Canary policy, only one of the following parameters can be selected, if not specified then no canary policy
  * @param args
  * @param logger
  * @returns {{}}
  */
-function validateCanaryStrategy(args, logger) {
+function validateCanaryPolicy(args, logger) {
   let response = {};
   const argsKeys = Object.keys(args);
-  logger.log(`keys in args: ${argsKeys}`);
+  logger.debug(`keys in args: [${argsKeys}]`);
 
-  let grayList = [];
+  let policies = [];
   if (argsKeys.includes('canaryStep')) {
-    grayList.push('canaryStep');
+    policies.push('canaryStep');
   }
   if (argsKeys.includes('canaryWeight')) {
-    grayList.push('canaryWeight');
+    policies.push('canaryWeight');
   }
   if (argsKeys.includes('canaryPlans')) {
-    grayList.push('canaryPlans');
+    policies.push('canaryPlans');
   }
   if (argsKeys.includes('linearStep')) {
-    grayList.push('linearStep');
+    policies.push('linearStep');
   }
-  logger.debug(`User input canary policy: ${JSON.stringify(grayList)}`);
+  logger.debug(`User input canary policy: ${JSON.stringify(policies)}`);
 
-  if (grayList.length === 0) {
+  if (policies.length === 0) {
     if (args.baseVersion !== null) {
-      logger.warn(
-        `We found that you didn't select the canary policy, so it defaults to a full release. With a full release, even if baseVersion is set, the codes will still be released at the newly created version.`,
-      );
+      logger.warn(`No canary policy found, the system will perform a full release`);
     }
 
     response.key = 'full';
     response.value = 100;
-  } else if (grayList.length > 1) {
-    throw new Error(
-      `Choose at most one grayscale strategy! You chose ${grayList.length} strategies`,
+  } else if (policies.length > 1) {
+    logger.error(
+      `Only one canary policy can be selected, but [${policies.length}] canary policies are found.`,
     );
+    process.exit(1);
   } else {
     // begin validate the strategy
-    const grayStrategyName = grayList[0];
+    const canaryPolicyName = policies[0];
     // only canaryPlans input is an array.
-    logger.log(grayStrategyName);
+    logger.info(canaryPolicyName);
 
-    if (grayStrategyName === 'canaryPlans') {
+    if (canaryPolicyName === 'canaryPlans') {
       // each plan in canaryPlans can't have a weight > 100
       const plans = _.get(args, 'canaryPlans');
-      logger.log(`canaryPlans: ${plans}`);
+      logger.debug(`canaryPlans: [${plans}]`);
 
       if (plans === undefined) {
-        throw new Error(
-          `CanaryPlans' format error, please double check the canaryPlans in the yaml.`,
+        logger.error(
+          `Format error, missing configuration of plan in canaryPlans, please check the configuration.`,
         );
+        process.exit(1);
       }
 
       for (const plan of _.get(args, 'canaryPlans')) {
-        logger.log(`plan: ${JSON.stringify(plan, null, 2)}`);
+        logger.debug(`plan: ${JSON.stringify(plan, null, 2)}`);
         if (plan.weight === undefined) {
-          throw new Error(`Weight is required`);
+          logger.error(`Missing weight in canaryPlans' configuration.`);
+          process.exit(1);
+        }
+        if (Math.round(plan.weight) !== plan.weight) {
+          logger.debug(`Round weight: ${Math.round(plan.weight)}`);
+          logger.error(`Weight must be number, current weight: [${plan.weight}]`);
+          process.exit(1);
         }
         if (plan.interval === undefined) {
-          throw new Error(`Interval is required`);
+          logger.error(`Missing interval in canaryPlans' configuration.`);
+          process.exit(1);
+        } else {
+          if (isNaN(plan.interval)) {
+            logger.error(`Interval must be number. Wrong value: [${plan.interval}]`);
+            process.exit(1);
+          } else {
+            if (Math.round(plan.interval) !== plan.interval) {
+              logger.error(`Interval must be Integer. Wrong value: [${plan.interval}]`);
+              process.exit(1);
+            } else {
+              if (plan.interval < 1) {
+                logger.error(`Interval must be equal to or larger than 1: [${plan.interval}]`);
+                process.exit(1);
+              }
+            }
+          }
         }
 
         if (plan.weight > 100) {
-          throw new Error(`Plans in canaryPlans can't have a weight > 100`);
+          logger.error(`Weight must be less than or equal to 100. Wrong value: [${plan.weight}]`);
+          process.exit(1);
         }
         if (plan.weight < 1) {
-          throw new Error(`Plans in canaryPlans can't have a weight <= 0`);
+          logger.error(`Weight must be more than 0. Wrong value: [${plan.weight}]`);
+          process.exit(1);
         }
       }
       response.key = 'canaryPlans';
@@ -103,49 +201,90 @@ function validateCanaryStrategy(args, logger) {
     }
 
     // linearStep and canaryStep
-    if (grayStrategyName === 'linearStep' || grayStrategyName === 'canaryStep') {
-      const grayStrategy = _.get(args, grayStrategyName);
-      if (grayStrategy === undefined) {
-        throw new Error(
-          `${grayStrategyName}'s format error, please double check the ${grayStrategyName} in the yaml.`,
+    if (canaryPolicyName === 'linearStep' || canaryPolicyName === 'canaryStep') {
+      const canaryPolicy = _.get(args, canaryPolicyName);
+      if (canaryPolicy === undefined) {
+        logger.error(
+          `Format error, missing configuration in [${canaryPolicyName}], please check the configuration.`,
         );
+        process.exit(1);
       }
 
-      if (grayStrategy.weight === undefined) {
-        throw new Error(`Weight is required, grayscale strategy: ${grayStrategyName}`);
+      if (canaryPolicy.weight === undefined) {
+        logger.error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
+        process.exit(1);
       }
-      if (grayStrategy.weight > 100) {
-        throw new Error(
-          `Grayscale strategy: ${grayStrategyName} can't have a weight > 100, current weight: ${grayStrategy.weight}`,
+      if (Math.round(canaryPolicy.weight) !== canaryPolicy.weight) {
+        logger.debug(`Round weight: ${Math.round(canaryPolicy.weight)}`);
+        logger.error(`Weight must be number, current weight: [${canaryPolicy.weight}]`);
+        process.exit(1);
+      }
+      if (canaryPolicy.weight > 100) {
+        logger.error(
+          `Weight must be less than or equal to 100. Wrong value: [${canaryPolicy.weight}]`,
         );
+        process.exit(1);
       }
-      if (grayStrategy.weight < 1) {
-        throw new Error(
-          `Grayscale strategy: ${grayStrategyName} can't have a weight <= 0, current weight: ${grayStrategy.weight}`,
-        );
+      if (canaryPolicy.weight < 1) {
+        logger.error(`Weight must be more than 0. Wrong value: [${canaryPolicy.weight}]`);
+        process.exit(1);
       }
-      response.key = `${grayStrategyName}`;
-      response.value = _.get(args, `${grayStrategyName}`);
+      if (canaryPolicy.interval == undefined) {
+        if (canaryPolicyName === 'linearStep') {
+          canaryPolicy.interval = 1;
+        }
+        if (canaryPolicyName === 'canaryStep') {
+          canaryPolicy.interval = 10;
+        }
+      } else {
+        if (isNaN(canaryPolicy.interval)) {
+          logger.error(`Interval must be number. Wrong value: [${canaryPolicy.interval}]`);
+          process.exit(1);
+        } else {
+          if (Math.round(canaryPolicy.interval) !== canaryPolicy.interval) {
+            logger.error(`Interval must be Integer. Wrong value: [${canaryPolicy.interval}]`);
+            process.exit(1);
+          } else {
+            if (canaryPolicy.interval < 1) {
+              logger.error(
+                `Interval must be equal to or larger than 1: [${canaryPolicy.interval}]`,
+              );
+              process.exit(1);
+            }
+          }
+        }
+      }
+
+      response.key = `${canaryPolicyName}`;
+      response.value = _.get(args, `[${canaryPolicyName}]`);
     }
 
     // canaryWeight
-    if (grayStrategyName === 'canaryWeight') {
+    if (canaryPolicyName === 'canaryWeight') {
       const canaryWeight = _.get(args, 'canaryWeight');
       if (canaryWeight === undefined) {
-        throw new Error(
-          `CanaryWeight's format error, please double check the canaryWeight in the yaml.`,
-        );
+        logger.error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
+        process.exit(1);
+      }
+      if (Math.round(canaryWeight) !== canaryWeight) {
+        logger.debug(`Round weight: ${Math.round(canaryWeight)}`);
+        logger.error(`Weight must be number, current weight: [${canaryWeight}]`);
+        process.exit(1);
       }
 
       if (canaryWeight > 100) {
-        throw new Error(`canaryWeight can't have a weight > 100, current weight: ${canaryWeight}`);
+        logger.error(
+          `Weight must be less than or equal to 100. Wrong value: [${canaryWeight}]`,
+        );
+        process.exit(1);
       }
       if (canaryWeight < 1) {
-        throw new Error(`canaryWeight can't have a weight <= 0, current weight: ${canaryWeight}`);
+        logger.error(`Weight must be more than 0. Wrong value: [${canaryWeight}]`);
+        process.exit(1);
       }
 
       response.key = 'canaryWeight';
-      response.value = _.get(args, 'canaryWeight');
+      response.value = canaryWeight;
     }
   }
   return response;
@@ -154,35 +293,42 @@ function validateCanaryStrategy(args, logger) {
 /**
  * check whether baseVersion must exist online.
  * @param serviceName
- * @param baseVersion
+ * @param baseVersionArgs
  * @param helper
  * @param logger
  * @returns {Promise<void>}
  */
-async function validateBaseVersion(serviceName, baseVersion, helper, logger) {
-  if (isNaN(baseVersion)) {
-    throw new Error(
-      `BaseVersion is not number, baseVersion: ${baseVersion}, typeof baseVersion: ${typeof baseVersion}`,
+async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger) {
+  if (isNaN(baseVersionArgs)) {
+    logger.error(
+      `BaseVersion must be a number, baseVersion: [${baseVersionArgs}], typeof current baseVersion: [${typeof baseVersionArgs}]`,
     );
+    process.exit(1);
   }
 
-  const response = await helper.listVersion(serviceName, 1, baseVersion.toString());
+  const response = await helper.listVersion(serviceName, 1, baseVersionArgs);
 
   if (response == undefined || response.body == undefined) {
-    throw new Error(
-      `No response from the system when validate versions, serviceName: ${serviceName}, please contact staff.`,
+    logger.error(
+      `No response found when list versions of service: [${serviceName}]. Please contact staff.`,
     );
+    process.exit(1);
   }
 
   if (
-    response.body.versions.length != 1 ||
-    response.body.versions[0].versionId !== baseVersion.toString()
+    response.body.versions.length === 0 ||
+    response.body.versions[0].versionId !== baseVersionArgs
   ) {
-    throw new Error(
-      `BaseVersion is not valid. baseVersion: ${baseVersion}, serviceName: ${serviceName}`,
-    );
+    logger.error(`BaseVersion: [${baseVersionArgs}] doesn't exists in service: [${serviceName}]. There are two solutions: 1. Do not set baseVersion。 Please check readme.md for information about not configuring baseVersion. 2. Set a valid baseVersion.`);
+    process.exit(1);
   }
+
 }
 
+function sleep(timer) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(true), timer);
+  });
+}
 
-module.exports = { validateArgs, validateCanaryStrategy };
+module.exports = { validateAllParamsAndParseCanaryPolicy };

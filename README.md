@@ -19,7 +19,7 @@ actions:
       args:
         service: test-service
         alias: stable
-        describtion: 'test canary'
+        description: 'test canary'
         baseVersion: 1 #基线版本，如果指定则使用该版本做为主版本和灰度版本进行切换
         canaryStep: # 灰度20%流量，10分钟后灰度剩余80%流量
           weight: 20
@@ -34,12 +34,12 @@ actions:
 
 ### 基本参数
 
-| 参数名称        | 参数含义                                | 必填    | 默认值                            | 例子             |
-|-------------|-------------------------------------|-------|--------------------------------|----------------|
-| service     | 服务名称。不指定则使用关联组件的 `${serviceName}`   | false | 关联组件的 `${serviceName}`         | demo-service   |
-| alias       | 别名。 不指定则使用 `${functionName}_stable` | false | 关联组件的 `${functionName}_stable` | stable         |
-| description | 发布描述。版本及别名都使用该描述                    | false | ''                             | canary testing |
-| baseVersion | 基线版本。如果指定则使用该版本做为主版本和灰度版本进行切换       | false | null                           | 1              |
+| 参数名称        | 参数含义                                                                                                                 | 必填    | 默认值                            | 例子             |
+|-------------|----------------------------------------------------------------------------------------------------------------------|-------|--------------------------------|----------------|
+| service     | 服务名称。不指定则使用关联组件的 `${serviceName}`                                                                                    | false | 关联组件的 `${serviceName}`         | demo-service   |
+| alias       | 别名。 不指定则使用 `${functionName}_stable`                                                                                  | false | 关联组件的 `${functionName}_stable` | stable         |
+| description | 发布描述。版本及别名都使用该描述                                                                                                     | false | ''                             | canary testing |
+| baseVersion | 基线版本。如果指定则使用该版本做为主版本和灰度版本进行切换<br/> Full release 时不可以配置baseVersion.  | false | BaseVersion未填写时，系统将把baseVersion设置为新创建version的前一个                           | 1              |
 
 ### 灰度策略
 描述具体的灰度策略，以下参数只能选择一个，如果不指定则不进行灰度，直接将新版本的权重设置成100

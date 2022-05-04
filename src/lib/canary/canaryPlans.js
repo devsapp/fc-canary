@@ -50,12 +50,11 @@ async function canaryPlansHelper(
         functionName,
       );
 
-      logger.log(
-        `Successfully do the part of canaryPlans, baseVersion: ${baseVersion}, canaryVersion: ${newCreatedVersion}. Weight: ${
-          grayWeight * 100
+      logger.info(
+        `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+          Math.round(grayWeight * 100)
         }% to canaryVersion`,
       );
-      logger.log(`Waiting for next release.`);
       await sleep(60000 * interval);
     } else {
       const grayWeight = strategy.weight / 100;
@@ -69,16 +68,14 @@ async function canaryPlansHelper(
         newCreatedVersion,
         grayWeight,
       );
-      logger.log(
-        `Successfully do the part of canaryPlans, baseVersion: ${baseVersion}, canaryVersion: ${newCreatedVersion}. Weight: ${
-          grayWeight * 100
+      logger.info(
+        `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+          Math.round(grayWeight * 100)
         }% to canaryVersion`,
       );
-      logger.log(`Waiting for next release.`);
       await sleep(60000 * interval);
     }
   }
-  logger.log('Begin fully release');
   await functionHelper.updateAlias(
     argService,
     baseVersion,
@@ -87,8 +84,8 @@ async function canaryPlansHelper(
     newCreatedVersion,
     1,
   );
-  logger.log(
-    `Successfully do the part of canaryPlans, baseVersion: ${baseVersion}, canaryVersion: ${newCreatedVersion}. Weight: 100% to canaryVersion`,
+  logger.info(
+    `Successfully preform canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: 100% to canaryVersion`,
   );
 }
 

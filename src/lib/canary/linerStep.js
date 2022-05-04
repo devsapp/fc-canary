@@ -49,16 +49,16 @@ async function linerStepHelper(
     functionName,
   );
 
-  logger.log(
-    `Successfully do the part of linearStep, baseVersion: ${baseVersion}, canaryVersion: ${newCreatedVersion}. Weight: ${
-      weightCount * 100
+  logger.info(
+    `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+      Math.round(weightCount * 100)
     }% to canaryVersion`,
   );
 
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
   await sleep(60000 * interval);
-  weightCount = weightCount + grayWeight;
+  weightCount = (weightCount * 3 + grayWeight * 3) / 3;
   while (weightCount < 1) {
     await functionHelper.updateAlias(
       argService,
@@ -68,16 +68,15 @@ async function linerStepHelper(
       newCreatedVersion,
       weightCount,
     );
-    logger.log(
-      `Successfully do the part of linearStep, baseVersion: ${baseVersion}, canaryVersion: ${newCreatedVersion}. Weight: ${
-        weightCount * 100
+    logger.info(
+      `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+        Math.round(weightCount * 100)
       }% to canaryVersion`,
     );
-    weightCount = weightCount + grayWeight;
+
+    weightCount = (weightCount * 3 + grayWeight * 3) / 3;
     await sleep(60000 * interval);
   }
-
-  logger.log(`Begin fully release.`);
 
   await functionHelper.updateAlias(
     argService,
@@ -88,7 +87,7 @@ async function linerStepHelper(
     1,
   );
 
-  logger.log(`Fully release successfully.`);
+  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion`,);
 }
 
 module.exports = {

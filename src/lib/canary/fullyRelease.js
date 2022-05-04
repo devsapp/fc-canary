@@ -12,6 +12,7 @@ async function fullyReleaseHelper(
 ) {
   // alias
   if (getAliasResponse === undefined) {
+
     await functionHelper.createAlias(
       argService,
       newCreatedVersion,
@@ -43,7 +44,7 @@ async function fullyReleaseHelper(
     functionName,
   );
 
-  logger.log('Successfully do fully release');
+  logger.info(`Successfully preformed a full release, 100% traffic to version [${newCreatedVersion}]`);
 }
 
 module.exports = {

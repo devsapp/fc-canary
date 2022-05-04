@@ -1,15 +1,15 @@
 const { FcHelper } = require('../bin/FcHelper');
 const { printObject } = require('../utils/objectUtils');
-const { validateArgs, validateCanaryStrategy } = require('./validate/validateArgs');
+const { validateAllParamsAndParseCanaryPolicy } = require('./validate/validateArgs');
 const { FunctionHelper } = require('../bin/FunctionHelper');
 const { canaryWeightHelper } = require('./canary/canaryWeight');
 const { fullyReleaseHelper } = require('./canary/fullyRelease');
 const { Logger } = require('@serverless-devs/core');
 const logger = new Logger('fc-canary');
-const _ = require('lodash');
 const { canaryStepHelper } = require('./canary/canaryStep');
 const { canaryPlansHelper } = require('./canary/canaryPlans');
 const { linerStepHelper } = require('./canary/linerStep');
+
 
 /**
  * if the yaml contains single function.
@@ -38,137 +38,224 @@ async function singleFunc(inputs, args) {
   // TODO 会不会上个post插件删除inputs.output导致我这里拿不到custom domain
   const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
 
-  if (serviceName == undefined) {
-    throw new Error(`ServiceName is undefined`);
-  }
-  if (functionName == undefined) {
-    throw new Error(`FunctionName is undefined`);
-  }
-
-  // validate args
-  await validateArgs(inputs, args, logger, fcHelper);
+  // validate
+  const policy = await validateAllParamsAndParseCanaryPolicy(
+    logger,
+    serviceName,
+    functionName,
+    inputs,
+    args,
+    fcHelper,
+  );
 
   const {
     service: argService = serviceName,
-    baseVersion: baseVersionArgs = undefined,
+    baseVersion = undefined,
     description = '',
     alias: aliasName = `${functionName}_stable`,
   } = args;
 
-  // check user's canary strategy.
-  const strategy = validateCanaryStrategy(args, logger);
-
-  if (_.isEmpty(strategy)) {
-    throw new Error(
-      `System error, please contact staff, inputs: ${JSON.stringify(
-        inputs,
-        null,
-        2,
-      )}, args: ${printObject(args)}`,
-    );
+  // if baseVersion is set, we convert it to a string.
+  let baseVersionArgs = baseVersion;
+  if (baseVersionArgs != undefined) {
+    baseVersionArgs = baseVersionArgs.toString();
   }
-
-  logger.log(`The canary strategy is: \n${printObject(strategy)}`);
-
-  const newCreatedVersion = await functionHelper.publishVersion(argService, description);
-
-  // check if alias exists
-  const getAliasResponse = await functionHelper.getAlias(argService, aliasName);
-
-  if (strategy.key === 'full') {
-    logger.log('Begin fully release');
-    await fullyReleaseHelper(
-      getAliasResponse,
-      functionHelper,
-      argService,
-      description,
-      newCreatedVersion,
-      aliasName,
-      triggers,
-      functionName,
-      customDomainList,
-      logger,
-    );
+  // publish a new version.
+  let newCreatedVersion;
+  let getAliasResponse;
+  await logger.task('Finish', [
+    {
+      title: 'Publish a new version',
+      id: 'publishing a new version',
+      task: async () => {
+        logger.debug(`Begin to publish a new version, serviceName: [${serviceName}].`);
+        newCreatedVersion = await functionHelper.publishVersion(argService, description);
+        logger.info(`Successfully published the version: [${newCreatedVersion}].`);
+      },
+    },
+    {
+      title: 'Checking alias',
+      id: 'checking alias',
+      task: async () => {
+        logger.debug(`Begin to check the existence of alias: [${aliasName}].`);
+        getAliasResponse = await functionHelper.getAlias(argService, aliasName);
+        logger.info(
+          `Successfully checked the existence of alias: [${aliasName}] ${
+            getAliasResponse == undefined ? "doesn't exist, and we will create it soon" : 'exists'
+          }.`,
+        );
+      },
+    },
+  ]);
+  if (policy.key === 'full') {
+    await logger.task('Finish', [
+      {
+        title: 'Preform a full release',
+        id: 'preforming a full release',
+        task: async () => {
+          await fullyReleaseHelper(
+            getAliasResponse,
+            functionHelper,
+            argService,
+            description,
+            newCreatedVersion,
+            aliasName,
+            triggers,
+            functionName,
+            customDomainList,
+            logger,
+          );
+        },
+      },
+    ]);
   } else {
     // 寻找baseVersion
-    const baseVersion = await functionHelper.findBaseVersion(
-      baseVersionArgs,
-      aliasName,
-      argService,
-      newCreatedVersion,
-    );
+    let baseVersion;
+    await logger.task('Finish', [
+      {
+        title: 'Finding baseVersion',
+        id: 'finding baseVersion',
+        task: async () => {
+          baseVersion = await functionHelper.findBaseVersion(
+            baseVersionArgs,
+            aliasName,
+            argService,
+            newCreatedVersion,
+            getAliasResponse,
+          );
+        },
+      },
+    ]);
 
-    if (strategy.key === 'canaryWeight') {
-      logger.log('Begin canaryWeight release');
-      await canaryWeightHelper(
-        getAliasResponse,
-        functionHelper,
-        argService,
-        baseVersion,
-        description,
-        newCreatedVersion,
-        aliasName,
-        triggers,
-        functionName,
-        strategy.value / 100,
-        customDomainList,
-        logger,
+    if (baseVersion === newCreatedVersion) {
+      logger.warn(
+        `The first release must be a full release, automatically ignoring the canary configuration.`,
       );
+
+      await logger.task('Finish', [
+        {
+          title: 'Preform a full release',
+          id: 'preforming a full release',
+          task: async () => {
+            await fullyReleaseHelper(
+              getAliasResponse,
+              functionHelper,
+              argService,
+              description,
+              newCreatedVersion,
+              aliasName,
+              triggers,
+              functionName,
+              customDomainList,
+              logger,
+            );
+          },
+        },
+      ]);
+      return;
     }
 
-    if (strategy.key === 'canaryStep') {
-      logger.log('Begin canaryStep release');
-      await canaryStepHelper(
-        getAliasResponse,
-        functionHelper,
-        argService,
-        baseVersion,
-        description,
-        newCreatedVersion,
-        aliasName,
-        triggers,
-        functionName,
-        strategy.value,
-        customDomainList,
-        logger,
-      );
+    if (policy.key === 'canaryWeight') {
+      await logger.task('Finish', [
+        {
+          title: 'Preform a canaryWeight release',
+          id: 'preforming a canaryWeight release',
+          task: async () => {
+            await canaryWeightHelper(
+              getAliasResponse,
+              functionHelper,
+              argService,
+              baseVersion,
+              description,
+              newCreatedVersion,
+              aliasName,
+              triggers,
+              functionName,
+              policy.value / 100,
+              customDomainList,
+              logger,
+            );
+          },
+        },
+      ]);
     }
 
-    if (strategy.key === 'canaryPlans') {
-      logger.log('Begin canaryPlans release');
-      await canaryPlansHelper(
-        getAliasResponse,
-        functionHelper,
-        argService,
-        baseVersion,
-        description,
-        newCreatedVersion,
-        aliasName,
-        triggers,
-        functionName,
-        strategy.value,
-        customDomainList,
-        logger,
-      );
+    if (policy.key === 'canaryStep') {
+      await logger.task('Finish', [
+        {
+          title: 'Preform a canaryStep release',
+          id: 'preforming a canaryStep release',
+          task: async () => {
+            await canaryStepHelper(
+              getAliasResponse,
+              functionHelper,
+              argService,
+              baseVersion,
+              description,
+              newCreatedVersion,
+              aliasName,
+              triggers,
+              functionName,
+              policy.value,
+              customDomainList,
+              logger,
+            );
+          },
+        },
+      ]);
     }
-    if (strategy.key === 'linearStep') {
-      logger.log('Begin linearStep release');
-      await linerStepHelper(
-        getAliasResponse,
-        functionHelper,
-        argService,
-        baseVersion,
-        description,
-        newCreatedVersion,
-        aliasName,
-        triggers,
-        functionName,
-        strategy.value,
-        customDomainList,
-        logger,
-      );
+    if (policy.key === 'canaryPlans') {
+      await logger.task('Finish', [
+        {
+          title: 'Preform a canaryPlans release',
+          id: 'preforming a canaryPlans release',
+          task: async () => {
+            await canaryPlansHelper(
+              getAliasResponse,
+              functionHelper,
+              argService,
+              baseVersion,
+              description,
+              newCreatedVersion,
+              aliasName,
+              triggers,
+              functionName,
+              policy.value,
+              customDomainList,
+              logger,
+            );
+          },
+        },
+      ]);
+    }
+
+    if (policy.key == 'linearStep') {
+      await logger.task('Finish', [
+        {
+          title: 'Preform a linearStep release',
+          id: 'preforming a linearStep release',
+          task: async () => {
+            // logger.log('Begin linearStep release');
+            await linerStepHelper(
+              getAliasResponse,
+              functionHelper,
+              argService,
+              baseVersion,
+              description,
+              newCreatedVersion,
+              aliasName,
+              triggers,
+              functionName,
+              policy.value,
+              customDomainList,
+              logger,
+            );
+          },
+        },
+      ]);
     }
   }
 }
+
 
 module.exports = { singleFunc };
