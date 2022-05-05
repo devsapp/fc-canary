@@ -149,7 +149,7 @@ function validateCanaryPolicy(args, logger) {
       const plans = _.get(args, 'canaryPlans');
       logger.debug(`canaryPlans: [${plans}]`);
 
-      if (plans === undefined) {
+      if (plans == undefined) {
         logger.error(
           `Format error, missing configuration of plan in canaryPlans, please check the configuration.`,
         );
@@ -158,7 +158,7 @@ function validateCanaryPolicy(args, logger) {
 
       for (const plan of _.get(args, 'canaryPlans')) {
         logger.debug(`plan: ${JSON.stringify(plan, null, 2)}`);
-        if (plan.weight === undefined) {
+        if (plan.weight == undefined) {
           logger.error(`Missing weight in canaryPlans' configuration.`);
           process.exit(1);
         }
@@ -167,7 +167,7 @@ function validateCanaryPolicy(args, logger) {
           logger.error(`Weight must be number, current weight: [${plan.weight}]`);
           process.exit(1);
         }
-        if (plan.interval === undefined) {
+        if (plan.interval == undefined) {
           logger.error(`Missing interval in canaryPlans' configuration.`);
           process.exit(1);
         } else {
@@ -203,14 +203,14 @@ function validateCanaryPolicy(args, logger) {
     // linearStep and canaryStep
     if (canaryPolicyName === 'linearStep' || canaryPolicyName === 'canaryStep') {
       const canaryPolicy = _.get(args, canaryPolicyName);
-      if (canaryPolicy === undefined) {
+      if (canaryPolicy == undefined) {
         logger.error(
           `Format error, missing configuration in [${canaryPolicyName}], please check the configuration.`,
         );
         process.exit(1);
       }
 
-      if (canaryPolicy.weight === undefined) {
+      if (canaryPolicy.weight == undefined) {
         logger.error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
         process.exit(1);
       }
@@ -262,7 +262,7 @@ function validateCanaryPolicy(args, logger) {
     // canaryWeight
     if (canaryPolicyName === 'canaryWeight') {
       const canaryWeight = _.get(args, 'canaryWeight');
-      if (canaryWeight === undefined) {
+      if (canaryWeight == undefined) {
         logger.error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
         process.exit(1);
       }

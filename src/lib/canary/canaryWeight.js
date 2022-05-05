@@ -15,7 +15,7 @@ async function canaryWeightHelper(
   logger,
 ) {
   // alias
-  if (getAliasResponse === undefined) {
+  if (getAliasResponse == undefined) {
     await functionHelper.createAlias(
       argService,
       baseVersion,

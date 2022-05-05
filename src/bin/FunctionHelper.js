@@ -111,7 +111,7 @@ class FunctionHelper {
     }
     let request;
 
-    // if newCreatedVersion === undefined, it means it is a full release.
+    // if newCreatedVersion == undefined, it means it is a full release.
     if (newCreatedVersion == undefined) {
       request = new CreateAliasRequest({
         aliasName: aliasName,
@@ -223,8 +223,8 @@ class FunctionHelper {
         aliasName,
       );
       if (
-        response === undefined ||
-        response.body === undefined ||
+        response == undefined ||
+        response.body == undefined ||
         response.body.qualifier !== aliasName
       ) {
         this.logger.error(`Failed to update trigger: [${item.triggerName}]. Please contact staff.`);
@@ -253,7 +253,7 @@ class FunctionHelper {
   async updateCustomDomainListByAlias(serviceName, customDomainList, aliasName, functionName) {
     this.logger.debug('Begin to update custom domains.')
     for (const item of customDomainList) {
-      if (item.domain === undefined) {
+      if (item.domain == undefined) {
         this.logger.error(
           `Custom domain name is undefined. Please check the custom domain configs`,
         );

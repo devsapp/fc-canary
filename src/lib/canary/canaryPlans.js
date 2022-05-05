@@ -19,7 +19,7 @@ async function canaryPlansHelper(
       const canaryWeight = strategy.weight / 100;
       const interval = strategy.interval;
       // alias
-      if (getAliasResponse === undefined) {
+      if (getAliasResponse == undefined) {
         await functionHelper.createAlias(
           argService,
           baseVersion,
@@ -69,9 +69,9 @@ async function canaryPlansHelper(
         canaryWeight,
       );
       logger.info(
-        `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+        `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(canaryWeight * 100)}% traffic to baseVersion, ${
           Math.round(canaryWeight * 100)
-        }% to canaryVersion.`,
+        }% traffic to canaryVersion.`,
       );
       await sleep(60000 * interval);
     }
@@ -85,7 +85,7 @@ async function canaryPlansHelper(
     1,
   );
   logger.info(
-    `Successfully preform canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: 100% to canaryVersion.`,
+    `Successfully preform canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. 100% traffic to canaryVersion.`,
   );
 }
 

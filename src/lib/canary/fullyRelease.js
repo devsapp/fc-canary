@@ -11,7 +11,7 @@ async function fullyReleaseHelper(
   logger,
 ) {
   // alias
-  if (getAliasResponse === undefined) {
+  if (getAliasResponse == undefined) {
 
     await functionHelper.createAlias(
       argService,

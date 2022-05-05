@@ -18,7 +18,7 @@ async function linerStepHelper(
   let weightCount = canaryWeight;
 
   // alias
-  if (getAliasResponse === undefined) {
+  if (getAliasResponse == undefined) {
     await functionHelper.createAlias(
       argService,
       baseVersion,
@@ -50,9 +50,9 @@ async function linerStepHelper(
   );
 
   logger.info(
-    `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+    `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(weightCount * 100)}% traffic to baseVersion, ${
       Math.round(weightCount * 100)
-    }% to canaryVersion.`,
+    }% traffic to canaryVersion.`,
   );
 
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -69,9 +69,9 @@ async function linerStepHelper(
       weightCount,
     );
     logger.info(
-      `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
+      `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(weightCount * 100)}% traffic to baseVersion, ${
         Math.round(weightCount * 100)
-      }% to canaryVersion.`,
+      }% traffic to canaryVersion.`,
     );
 
     weightCount = (weightCount * 3 + canaryWeight * 3) / 3;

@@ -16,7 +16,7 @@ async function canaryStepHelper(
   const interval = strategy.interval;
 
   // alias
-  if (getAliasResponse === undefined) {
+  if (getAliasResponse == undefined) {
     await functionHelper.createAlias(
       argService,
       baseVersion,
@@ -48,7 +48,7 @@ async function canaryStepHelper(
   );
 
   logger.info(
-    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${Math.round(canaryWeight * 100)} % to canaryVersion.`,
+    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(canaryWeight * 100)}% traffic to baseVersion, ${Math.round(canaryWeight * 100)}% traffic to canaryVersion.`,
   );
 
   if (canaryWeight === 1) {
