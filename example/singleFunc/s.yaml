@@ -10,24 +10,26 @@ services:
       post-deploy: # 在deploy之后运行
         - plugin: ${path(../..)}
           args:
-#            alias: test3
-            baseVersion: 14
+            notification:
+              dingding: https://oapi.dingtalk.com/robot/send?access_token=a14a4e93ebd5eb5c82de8817481e44dcfae5a484b17efbf05d3d7238e05de0bb
+            alias: test6
+            #            baseVersion: 5
             description: '1231xx23'
-#            service: xxx
-#            canaryStep:
-#              weight: 30
-#              interval: 1
-#            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
-            canaryPlans: #自定义灰度
-              - weight: 10
-                interval: 1
-              - weight: 30
-                interval: 1
-              - weight: 40
-                interval: 1
-#            linearStep:
-#                weight: 40
-#                interval: 1
+            #            service: xxx
+            canaryStep:
+              weight: 40
+    #              interval: 1
+    #            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
+    #            canaryPlans: #自定义灰度
+    #              - weight: 1
+    #                interval: 1
+    #              - weight: 30
+    #                interval: 1
+    #              - weight: 40
+    #                interval: 1
+    #            linearStep:
+    #                weight: 40
+    #                interval: 1
     props:
       region: cn-hangzhou
       service:
@@ -58,6 +60,12 @@ services:
           protocol: HTTP
           routeConfigs:
             - path: '/index'
+              serviceName: preProd1
+              functionName: dummy-function
+            - path: '/cat'
+              serviceName: test-fully
+              functionName: dummy-function
+
 
 
 

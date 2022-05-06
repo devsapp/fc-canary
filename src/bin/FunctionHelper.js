@@ -20,18 +20,16 @@ class FunctionHelper {
       response.body == undefined ||
       response.body.versionId == undefined
     ) {
-      this.logger.error(
-        `No response found when publish new version of service: [${serviceName}]. Please contact staff`,
+      throw new Error(
+        `No response found when publish new version of service: [${serviceName}]. Please contact staff.`,
       );
-      process.exit(1);
     }
     if (!isNaN(response.body.versionId)) {
       return response.body.versionId;
     }
-    this.logger.error(
+    throw new Error(
       `Failed to create a new version of service: [${serviceName}], please contact the staff.`,
     );
-    process.exit(1);
   }
 
   /**
@@ -59,11 +57,9 @@ class FunctionHelper {
       // if aliasName exists, set the version of the aliasName to baseVersion
       if (getAliasResponse !== undefined && getAliasResponse.body != undefined) {
         if (isNaN(getAliasResponse.body.versionId)) {
-          this.logger.error(
+          throw new Error(
             `VersionId of alias: [${aliasName}] is not a number. Please contact staff.`,
           );
-          process.exit(1);
-
         }
         baseVersion = getAliasResponse.body.versionId;
       } else {
@@ -75,18 +71,14 @@ class FunctionHelper {
           getVersionResponse.body.versions == undefined ||
           getVersionResponse.body.versions.constructor.name != 'Array'
         ) {
-          this.logger.error(
+          throw new Error(
             `No response found when list versions of service: [${serviceName}]. Please contact staff.`,
           );
-          process.exit(1);
-
         }
 
         const versionIdList = getVersionResponse.body.versions;
         if (versionIdList.length === 0 || versionIdList[0].versionId !== newCreatedVersion) {
-          this.logger.error(`New created version: [${newCreatedVersion}] has been deleted.`);
-          process.exit(1);
-
+          throw new Error(`New created version: [${newCreatedVersion}] has been deleted.`);
         } else {
           if (versionIdList.length === 1) {
             baseVersion = newCreatedVersion;
@@ -96,18 +88,15 @@ class FunctionHelper {
         }
       }
     }
-    this.logger.debug(`After finding baseVersion, current baseVersion is: [${baseVersion}]`);
+    this.logger.debug(`After finding baseVersion, current baseVersion is: [${baseVersion}].`);
     // after argsValidate, if baseVersion is not undefined, it must be a valid version.
     return baseVersion;
   }
 
   async createAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
-
-
     this.logger.debug(`Begin to create a new Alias: [${aliasName}].`);
     if (baseVersion == undefined) {
-      this.logger.error('BaseVersion must be set when creating a new alias.');
-      process.exit(1);
+      throw new Error('BaseVersion must be set when creating a new alias.');
     }
     let request;
 
@@ -128,22 +117,20 @@ class FunctionHelper {
     }
     const createAliasResponse = await this.helper.createAlias(serviceName, request);
     if (createAliasResponse == undefined || createAliasResponse.body == undefined) {
-      this.logger.error(
+      throw new Error(
         `No response found when creating a new alias: [${aliasName}]. Please contact staff.`,
       );
-      process.exit(1);
     }
     if (createAliasResponse.body.aliasName !== aliasName) {
-      this.logger.error(
+      throw new Error(
         `Failed to create an alias, expect: [${aliasName}], return: [${createAliasResponse.body.aliasName}].`,
       );
-      process.exit(1);
     }
     this.logger.info(`Successfully created a new Alias: [${aliasName}].`);
   }
 
   async updateAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
-    this.logger.debug(`Begin to update a Alias: [${aliasName}]`);
+    this.logger.debug(`Begin to update a Alias: [${aliasName}].`);
     let request;
     if (baseVersion == undefined) {
       // if there is no baseVersionId, fully release.
@@ -167,19 +154,17 @@ class FunctionHelper {
     }
     const updateAliasResponse = await this.helper.updateAlias(serviceName, aliasName, request);
     if (updateAliasResponse == undefined || updateAliasResponse.body == undefined) {
-      this.logger.error(
+      throw new Error(
         `No response found when updating an alias: [${aliasName}]. Please contact the staff.`,
       );
-      process.exit(1);
     }
     if (updateAliasResponse.body.aliasName !== aliasName) {
-      this.logger.error(
+      throw new Error(
         `Failed to update an alias, expect: [${aliasName}], return: [${updateAliasResponse.body.aliasName}].`,
       );
-      process.exit(1);
     }
 
-    this.logger.debug(`Successfully updated alias: [${aliasName}]`);
+    this.logger.debug(`Successfully updated alias: [${aliasName}].`);
   }
 
   async getAlias(serviceName, aliasName) {
@@ -191,10 +176,9 @@ class FunctionHelper {
         getAliasResponse.body == undefined ||
         getAliasResponse.body.versionId == undefined
       ) {
-        this.logger.error(
+        throw new Error(
           `No response found when checking alias: [${aliasName}]. Please contact staff.`,
         );
-        process.exit(1);
       }
     } catch (e) {
       // if Alias not found, the system will throw an error, we use this to check whether alias exists.
@@ -202,19 +186,16 @@ class FunctionHelper {
       if (e.message.indexOf('AliasNotFound') !== -1) {
         // do nothing
       } else {
-        this.logger.error(
+        throw new Error(
           `System error, error_code: [${e.code}], error_message: [${e.message}], please contact the staff.`,
         );
-        process.exit(1);
       }
     }
     return getAliasResponse;
   }
 
   async updateTriggerListByAlias(triggers, functionName, aliasName, serviceName) {
-    this.logger.debug(
-      `Begin to update triggers.`,
-    );
+    this.logger.debug(`Begin to update triggers.`);
     for (const item of triggers) {
       const response = await this.helper.updateTriggerAlias(
         serviceName,
@@ -227,8 +208,7 @@ class FunctionHelper {
         response.body == undefined ||
         response.body.qualifier !== aliasName
       ) {
-        this.logger.error(`Failed to update trigger: [${item.triggerName}]. Please contact staff.`);
-        process.exit(1);
+        throw new Error(`Failed to update trigger: [${item.triggerName}]. Please contact staff.`);
       }
     }
     this.logger.info(`Successfully updated triggers by setting alias: [${aliasName}].`);
@@ -251,13 +231,12 @@ class FunctionHelper {
    * @returns {Promise<void>}
    */
   async updateCustomDomainListByAlias(serviceName, customDomainList, aliasName, functionName) {
-    this.logger.debug('Begin to update custom domains.')
+    this.logger.debug('Begin to update custom domains.');
     for (const item of customDomainList) {
       if (item.domain == undefined) {
-        this.logger.error(
-          `Custom domain name is undefined. Please check the custom domain configs`,
+        throw new Error(
+          `Custom domain name is undefined. Please check the custom domain configuration`,
         );
-        process.exit(1);
       }
 
       const regex = /^https?\:\/\//i;
@@ -270,16 +249,16 @@ class FunctionHelper {
         response.body == undefined ||
         response.body.routeConfig == undefined
       ) {
-        this.logger.error(
+        throw new Error(
           `No response found when checking customDomain: [${domainName}]. Please contact staff.`,
         );
-        process.exit(1);
       }
       const routes = response.body.routeConfig.routes;
 
       if (!(Symbol.iterator in routes)) {
-        this.logger.error(`Failed to check custom domain, routes are not iterable: [${domainName}]. Please contact staff.`);
-        process.exit(1);
+        throw new Error(
+          `Failed to check custom domain, routes are not iterable: [${domainName}]. Please contact staff.`,
+        );
       }
       this.logger.debug(`Successfully checked custom domain: [${domainName}] exists.`);
       for (const route of routes) {
@@ -287,9 +266,7 @@ class FunctionHelper {
           route.qualifier = aliasName;
         }
       }
-      this.logger.debug(
-        `Begin to update custom domain [${domainName}] with alias [${aliasName}]`,
-      );
+      this.logger.debug(`Begin to update custom domain [${domainName}] with alias [${aliasName}]`);
       const updateCustomDomainResponse = await this.helper.updateCustomDomain(domainName, routes);
       if (
         updateCustomDomainResponse == undefined ||
@@ -297,10 +274,9 @@ class FunctionHelper {
         updateCustomDomainResponse.body.routeConfig == undefined ||
         updateCustomDomainResponse.body.routeConfig.routes == undefined
       ) {
-        this.logger.error(
+        throw new Error(
           `No response found when update custom domain: [${domainName}]. Please contact staff.`,
         );
-        process.exit(1);
       }
       // check if update successfully.
       const routesResponse = updateCustomDomainResponse.body.routeConfig.routes;
@@ -308,10 +284,9 @@ class FunctionHelper {
         _.isEmpty(routesResponse) !== _.isEmpty(routes) &&
         routes.length !== routesResponse.length
       ) {
-        this.logger.error(
+        throw new Error(
           `Failed to update custom domain, the number of routes before and after the update is different`,
         );
-        process.exit(1);
       }
       for (const route of routesResponse) {
         if (
@@ -319,17 +294,16 @@ class FunctionHelper {
           route.functionName === functionName &&
           route.qualifier !== aliasName
         ) {
-          this.logger.error(
+          throw new Error(
             `Failed to update custom domain, the qualifiers of routes were not updated`,
           );
-          process.exit(1);
         }
       }
-      this.logger.info(`Successfully updated custom domain: [${domainName}] by setting alias: [${aliasName}].`);
+      this.logger.info(
+        `Successfully updated custom domain: [${domainName}] by setting alias: [${aliasName}].`,
+      );
     }
-    this.logger.debug(
-      `Finish updating custom domains.`,
-    );
+    this.logger.debug(`Finish updating custom domains.`);
   }
 }
 

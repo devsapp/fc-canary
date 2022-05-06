@@ -11,7 +11,7 @@ const _ = require('lodash');
  * @param fcHelper
  * @returns {Promise<*>}
  */
-async function validateAllParamsAndParseCanaryPolicy(
+async function validateParams(
   logger,
   serviceName,
   functionName,
@@ -19,62 +19,39 @@ async function validateAllParamsAndParseCanaryPolicy(
   args,
   fcHelper,
 ) {
-  let policy;
-  await logger.task('Checking', [
-    {
-      title: 'Checking inputs',
-      id: 'inputs',
-      task: async () => {
-        if (serviceName == undefined) {
-          logger.error(`Missing service name in inputs`);
-          process.exit(1);
-        }
-        if (functionName == undefined) {
-          logger.error(`Missing function name in inputs`);
-          process.exit(1);
-        }
-      },
-    },
-    {
-      title: 'Checking args',
-      id: 'args',
-      task: async () => {
-        await validateArgs(inputs, args, logger, fcHelper);
-      },
-    },
-    {
-      title: 'Checking canary policy',
-      id: 'canary policy',
-      task: async () => {
-        // check user's canary strategy.
-        policy = validateCanaryPolicy(args, logger);
-        if (_.isEmpty(policy)) {
-          this.logger.error(
-            `Failed to parse the canary policy. Please double-check the configuration.`,
-          );
-          process.exit(1);
-        }
-      },
-    },
-    {
-      title: 'Checking custom domains',
-      id: 'custom domains',
-      task: async () => {
-        // check user's custom_domain.
-        const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
-        if (customDomainList.constructor.name !== 'Array') {
-          logger.error(`Failed to parse custom domains.`);
-          process.exit(1);
-        }
-        await sleep(50);
-      },
-    },
-  ]);
+
+
+  if (serviceName == undefined) {
+    throw new Error(`Missing service name in inputs.`);
+
+  }
+  if (functionName == undefined) {
+    throw new Error(`Missing function name in inputs.`);
+
+  }
+
+  await validateArgs(inputs, args, logger, fcHelper);
+
+  // check user's custom_domain.
+  const {custom_domain: customDomainList = []} = inputs.output && inputs.output.url;
+  if (customDomainList.constructor.name !== 'Array') {
+    throw new Error(`Failed to parse custom domains.`);
+
+  }
+}
+
+function checkCanaryPolicy(args, logger) {
+  // check user's canary strategy.
+  const policy = parseCanaryPolicy(args, logger);
+  if (_.isEmpty(policy)) {
+    throw new Error(`Failed to parse the canary policy. Please double-check the configuration.`);
+
+  }
   return policy;
 }
 
 async function validateArgs(inputs, args, logger, fcHelper) {
-  const { service, baseVersion } = args;
+  const {service, baseVersion} = args;
   let baseVersionArgs = baseVersion;
   if (baseVersionArgs != undefined) {
     baseVersionArgs = baseVersionArgs.toString();
@@ -85,10 +62,9 @@ async function validateArgs(inputs, args, logger, fcHelper) {
     const serviceDeployed =
       inputs && inputs.props && inputs.props.service && inputs.props.service.name;
     if (serviceDeployed !== service) {
-      logger.error(
-        `The service names in args [${service}] and inputs [${serviceDeployed}] are not the same.`,
+      throw new Error(
+        `The service names in args [${service}] and inputs [${serviceDeployed}] are different.`,
       );
-      process.exit(1);
     }
     curService = service;
   } else {
@@ -106,10 +82,10 @@ async function validateArgs(inputs, args, logger, fcHelper) {
  * @param logger
  * @returns {{}}
  */
-function validateCanaryPolicy(args, logger) {
+function parseCanaryPolicy(args, logger) {
   let response = {};
   const argsKeys = Object.keys(args);
-  logger.debug(`keys in args: [${argsKeys}]`);
+  logger.debug(`keys in args: [${argsKeys}].`);
 
   let policies = [];
   if (argsKeys.includes('canaryStep')) {
@@ -124,20 +100,19 @@ function validateCanaryPolicy(args, logger) {
   if (argsKeys.includes('linearStep')) {
     policies.push('linearStep');
   }
-  logger.debug(`User input canary policy: ${JSON.stringify(policies)}`);
+  logger.debug(`User input canary policy: ${JSON.stringify(policies)}.`);
 
   if (policies.length === 0) {
     if (args.baseVersion !== null) {
-      logger.warn(`No canary policy found, the system will perform a full release`);
+      logger.warn(`No canary policy found, the system will perform a full release.`);
     }
 
     response.key = 'full';
     response.value = 100;
   } else if (policies.length > 1) {
-    logger.error(
+    throw new Error(
       `Only one canary policy can be selected, but [${policies.length}] canary policies are found.`,
     );
-    process.exit(1);
   } else {
     // begin validate the strategy
     const canaryPolicyName = policies[0];
@@ -147,53 +122,46 @@ function validateCanaryPolicy(args, logger) {
     if (canaryPolicyName === 'canaryPlans') {
       // each plan in canaryPlans can't have a weight > 100
       const plans = _.get(args, 'canaryPlans');
-      logger.debug(`canaryPlans: [${plans}]`);
+      logger.debug(`canaryPlans: [${plans}].`);
 
       if (plans == undefined) {
-        logger.error(
+        throw new Error(
           `Format error, missing configuration of plan in canaryPlans, please check the configuration.`,
         );
-        process.exit(1);
       }
 
       for (const plan of _.get(args, 'canaryPlans')) {
-        logger.debug(`plan: ${JSON.stringify(plan, null, 2)}`);
+        logger.debug(`plan: ${JSON.stringify(plan, null, 2)}.`);
         if (plan.weight == undefined) {
-          logger.error(`Missing weight in canaryPlans' configuration.`);
-          process.exit(1);
+          throw new Error(`Missing weight in canaryPlans' configuration.`);
         }
         if (Math.round(plan.weight) !== plan.weight) {
-          logger.debug(`Round weight: ${Math.round(plan.weight)}`);
-          logger.error(`Weight must be number, current weight: [${plan.weight}]`);
-          process.exit(1);
+          logger.debug(`Round weight: ${Math.round(plan.weight)}.`);
+          throw new Error(`Weight must be number, current weight: [${plan.weight}].`);
         }
         if (plan.interval == undefined) {
-          logger.error(`Missing interval in canaryPlans' configuration.`);
-          process.exit(1);
+          throw new Error(`Missing interval in canaryPlans' configuration.`);
         } else {
           if (isNaN(plan.interval)) {
-            logger.error(`Interval must be number. Wrong value: [${plan.interval}]`);
-            process.exit(1);
+            throw new Error(`Interval must be number. Wrong value: [${plan.interval}].`);
           } else {
             if (Math.round(plan.interval) !== plan.interval) {
-              logger.error(`Interval must be Integer. Wrong value: [${plan.interval}]`);
-              process.exit(1);
+              throw new Error(`Interval must be Integer. Wrong value: [${plan.interval}].`);
             } else {
               if (plan.interval < 1) {
-                logger.error(`Interval must be equal to or larger than 1: [${plan.interval}]`);
-                process.exit(1);
+                throw new Error(`Interval must be equal to or larger than 1: [${plan.interval}].`);
               }
             }
           }
         }
 
         if (plan.weight > 100) {
-          logger.error(`Weight must be less than or equal to 100. Wrong value: [${plan.weight}]`);
-          process.exit(1);
+          throw new Error(
+            `Weight must be less than or equal to 100. Wrong value: [${plan.weight}].`,
+          );
         }
         if (plan.weight < 1) {
-          logger.error(`Weight must be more than 0. Wrong value: [${plan.weight}]`);
-          process.exit(1);
+          throw new Error(`Weight must be equal to or more than 1. Wrong value: [${plan.weight}].`);
         }
       }
       response.key = 'canaryPlans';
@@ -203,84 +171,75 @@ function validateCanaryPolicy(args, logger) {
     // linearStep and canaryStep
     if (canaryPolicyName === 'linearStep' || canaryPolicyName === 'canaryStep') {
       const canaryPolicy = _.get(args, canaryPolicyName);
+
       if (canaryPolicy == undefined) {
-        logger.error(
+        throw new Error(
           `Format error, missing configuration in [${canaryPolicyName}], please check the configuration.`,
         );
-        process.exit(1);
       }
 
       if (canaryPolicy.weight == undefined) {
-        logger.error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
-        process.exit(1);
+        throw new Error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
       }
       if (Math.round(canaryPolicy.weight) !== canaryPolicy.weight) {
-        logger.debug(`Round weight: ${Math.round(canaryPolicy.weight)}`);
-        logger.error(`Weight must be number, current weight: [${canaryPolicy.weight}]`);
-        process.exit(1);
+        logger.debug(`Round weight: ${Math.round(canaryPolicy.weight)}.`);
+        throw new Error(`Weight must be number, current weight: [${canaryPolicy.weight}].`);
       }
       if (canaryPolicy.weight > 100) {
-        logger.error(
+        throw new Error(
           `Weight must be less than or equal to 100. Wrong value: [${canaryPolicy.weight}]`,
         );
-        process.exit(1);
       }
       if (canaryPolicy.weight < 1) {
-        logger.error(`Weight must be more than 0. Wrong value: [${canaryPolicy.weight}]`);
-        process.exit(1);
+        throw new Error(
+          `Weight must be equal to or more than 1. Wrong value: [${canaryPolicy.weight}].`,
+        );
       }
       if (canaryPolicy.interval == undefined) {
         if (canaryPolicyName === 'linearStep') {
+          logger.warn(`No interval found, the system defaults to using 1 minute as the interval`);
           canaryPolicy.interval = 1;
         }
         if (canaryPolicyName === 'canaryStep') {
+          logger.warn(`No interval found, the system defaults to using 10 minutes as the interval`);
           canaryPolicy.interval = 10;
         }
       } else {
         if (isNaN(canaryPolicy.interval)) {
-          logger.error(`Interval must be number. Wrong value: [${canaryPolicy.interval}]`);
-          process.exit(1);
+          throw new Error(`Interval must be number. Wrong value: [${canaryPolicy.interval}].`);
         } else {
           if (Math.round(canaryPolicy.interval) !== canaryPolicy.interval) {
-            logger.error(`Interval must be Integer. Wrong value: [${canaryPolicy.interval}]`);
-            process.exit(1);
+            throw new Error(`Interval must be Integer. Wrong value: [${canaryPolicy.interval}].`);
           } else {
             if (canaryPolicy.interval < 1) {
-              logger.error(
+              throw new Error(
                 `Interval must be equal to or larger than 1: [${canaryPolicy.interval}]`,
               );
-              process.exit(1);
             }
           }
         }
       }
 
       response.key = `${canaryPolicyName}`;
-      response.value = _.get(args, `[${canaryPolicyName}]`);
+      response.value = _.get(args, `${canaryPolicyName}`);
     }
 
     // canaryWeight
     if (canaryPolicyName === 'canaryWeight') {
       const canaryWeight = _.get(args, 'canaryWeight');
       if (canaryWeight == undefined) {
-        logger.error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
-        process.exit(1);
+        throw new Error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
       }
       if (Math.round(canaryWeight) !== canaryWeight) {
-        logger.debug(`Round weight: ${Math.round(canaryWeight)}`);
-        logger.error(`Weight must be number, current weight: [${canaryWeight}]`);
-        process.exit(1);
+        logger.debug(`Round weight: ${Math.round(canaryWeight)}.`);
+        throw new Error(`Weight must be number, current weight: [${canaryWeight}].`);
       }
 
       if (canaryWeight > 100) {
-        logger.error(
-          `Weight must be less than or equal to 100. Wrong value: [${canaryWeight}]`,
-        );
-        process.exit(1);
+        throw new Error(`Weight must be less than or equal to 100. Wrong value: [${canaryWeight}]`);
       }
       if (canaryWeight < 1) {
-        logger.error(`Weight must be more than 0. Wrong value: [${canaryWeight}]`);
-        process.exit(1);
+        throw new Error(`Weight must be equal to or more than 1. Wrong value: [${canaryWeight}].`);
       }
 
       response.key = 'canaryWeight';
@@ -300,35 +259,27 @@ function validateCanaryPolicy(args, logger) {
  */
 async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger) {
   if (isNaN(baseVersionArgs)) {
-    logger.error(
+    throw new Error(
       `BaseVersion must be a number, baseVersion: [${baseVersionArgs}], typeof current baseVersion: [${typeof baseVersionArgs}]`,
     );
-    process.exit(1);
   }
 
   const response = await helper.listVersion(serviceName, 1, baseVersionArgs);
 
   if (response == undefined || response.body == undefined) {
-    logger.error(
+    throw new Error(
       `No response found when list versions of service: [${serviceName}]. Please contact staff.`,
     );
-    process.exit(1);
   }
 
   if (
     response.body.versions.length === 0 ||
     response.body.versions[0].versionId !== baseVersionArgs
   ) {
-    logger.error(`BaseVersion: [${baseVersionArgs}] doesn't exists in service: [${serviceName}]. There are two solutions: 1. Do not set baseVersion。 Please check readme.md for information about not configuring baseVersion. 2. Set a valid baseVersion.`);
-    process.exit(1);
+    throw new Error(
+      `BaseVersion: [${baseVersionArgs}] doesn't exists in service: [${serviceName}]. There are two solutions: 1. Do not set baseVersion. Please check README.md for information about not configuring baseVersion. 2. Set a valid baseVersion.`,
+    );
   }
-
 }
 
-function sleep(timer) {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(true), timer);
-  });
-}
-
-module.exports = { validateAllParamsAndParseCanaryPolicy };
+module.exports = { validateParams, checkCanaryPolicy };

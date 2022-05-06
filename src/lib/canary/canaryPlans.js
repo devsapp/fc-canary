@@ -51,9 +51,11 @@ async function canaryPlansHelper(
       );
 
       logger.info(
-        `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. Weight: ${
-          Math.round(canaryWeight * 100)
-        }% to canaryVersion.`,
+        `Successfully completed one step of the canaryPlans release: allocated ${
+          100 - Math.round(canaryWeight * 100)
+        }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+          canaryWeight * 100,
+        )}% traffic to canaryVersion: [${newCreatedVersion}].`,
       );
       await sleep(60000 * interval);
     } else {
@@ -69,9 +71,11 @@ async function canaryPlansHelper(
         canaryWeight,
       );
       logger.info(
-        `Successfully preformed one step of canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(canaryWeight * 100)}% traffic to baseVersion, ${
-          Math.round(canaryWeight * 100)
-        }% traffic to canaryVersion.`,
+        `Successfully completed one step of the canaryPlans release: allocated ${
+          100 - Math.round(canaryWeight * 100)
+        }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+          canaryWeight * 100,
+        )}% traffic to canaryVersion: [${newCreatedVersion}].`,
       );
       await sleep(60000 * interval);
     }
@@ -85,8 +89,9 @@ async function canaryPlansHelper(
     1,
   );
   logger.info(
-    `Successfully preform canaryPlans, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. 100% traffic to canaryVersion.`,
+    `Successfully completed the last step of the canaryPlans release: allocated 100% traffic to canaryVersion: [${newCreatedVersion}].`,
   );
+  logger.info(`CanaryPlan release completed.`);
 }
 
 module.exports = {

@@ -50,9 +50,11 @@ async function linerStepHelper(
   );
 
   logger.info(
-    `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(weightCount * 100)}% traffic to baseVersion, ${
-      Math.round(weightCount * 100)
-    }% traffic to canaryVersion.`,
+    `Successfully completed one step of the linearStep release: allocated ${
+      100 - Math.round(weightCount * 100)
+    }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+      weightCount * 100,
+    )}% traffic to canaryVersion: [${newCreatedVersion}].`,
   );
 
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -69,11 +71,12 @@ async function linerStepHelper(
       weightCount,
     );
     logger.info(
-      `Successfully preform the part of linearStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(weightCount * 100)}% traffic to baseVersion, ${
-        Math.round(weightCount * 100)
-      }% traffic to canaryVersion.`,
+      `Successfully completed one step of the linearStep release: allocated ${
+        100 - Math.round(weightCount * 100)
+      }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+        weightCount * 100,
+      )}% traffic to canaryVersion: [${newCreatedVersion}].`,
     );
-
     weightCount = (weightCount * 3 + canaryWeight * 3) / 3;
     await sleep(60000 * interval);
   }
@@ -87,7 +90,10 @@ async function linerStepHelper(
     1,
   );
 
-  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion.`,);
+  logger.info(
+    `Successfully completed the last step of the linearStep release: allocated 100% traffic to canaryVersion: [${newCreatedVersion}].`,
+  );
+  logger.info(`LinearStep release completed.`);
 }
 
 module.exports = {

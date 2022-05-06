@@ -48,18 +48,22 @@ async function canaryStepHelper(
   );
 
   logger.info(
-    `Successfully preform the first part of canaryStep, baseVersion: [${baseVersion}], canaryVersion: [${newCreatedVersion}]. ${100 - Math.round(canaryWeight * 100)}% traffic to baseVersion, ${Math.round(canaryWeight * 100)}% traffic to canaryVersion.`,
+    `Successfully completed the first step of the canaryStep release: allocated ${
+      100 - Math.round(canaryWeight * 100)
+    }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+      canaryWeight * 100,
+    )}% traffic to canaryVersion: [${newCreatedVersion}].`,
   );
 
   if (canaryWeight === 1) {
-    logger.info('Already preform a full release, stop.');
+    logger.info(`Already allocated 100% traffic to canaryVersion: [${newCreatedVersion}], stop.`);
+    logger.info(`CanaryStep release completed.`);
     return;
   }
 
   const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
   await sleep(60000 * interval);
-
 
   await functionHelper.updateAlias(
     argService,
@@ -70,7 +74,10 @@ async function canaryStepHelper(
     1,
   );
 
-  logger.info( `Successfully preform the full release, baseVersion: [${baseVersion}], canaryVersion:[${newCreatedVersion}] 100% to canaryVersion.`);
+  logger.info(
+    `Successfully completed the second step of the canaryStep release: allocated 100% traffic to canaryVersion: [${newCreatedVersion}].`,
+  );
+  logger.info(`CanaryStep release completed.`);
 }
 
 module.exports = {

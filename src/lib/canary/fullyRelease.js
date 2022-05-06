@@ -12,7 +12,6 @@ async function fullyReleaseHelper(
 ) {
   // alias
   if (getAliasResponse == undefined) {
-
     await functionHelper.createAlias(
       argService,
       newCreatedVersion,
@@ -44,7 +43,8 @@ async function fullyReleaseHelper(
     functionName,
   );
 
-  logger.info(`Successfully preformed a full release, 100% traffic to version [${newCreatedVersion}].`);
+  logger.info(`Successfully allocated 100% traffic to canaryVersion: [${newCreatedVersion}].`);
+  logger.info(`Full release completed.`);
 }
 
 module.exports = {

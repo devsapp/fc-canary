@@ -46,7 +46,14 @@ async function canaryWeightHelper(
     functionName,
   );
 
-  logger.info(`Successfully do canaryWeight release, ${100 - Math.round(canaryWeight * 100)}% traffic to baseVersion: [${baseVersion}], ${Math.round(canaryWeight * 100)}% traffic to new created version: [${newCreatedVersion}].`);
+  logger.info(
+    `Successfully completed the canaryWeight release: ${
+      100 - Math.round(canaryWeight * 100)
+    }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+      canaryWeight * 100,
+    )}% traffic to new created version: [${newCreatedVersion}].`,
+  );
+  logger.info(`CanaryWeight release completed.`);
 }
 
 module.exports = {

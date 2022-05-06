@@ -27,13 +27,13 @@ class FcHelper {
         return await this.client[fnName](...args);
       } catch (e) {
         if (e.code === 'ECONNRESET') {
-          this.logger.debug('An ECONNRESET exception occurred, using the retry strategy to fix the exception.');
-
+          this.logger.debug(
+            'An ECONNRESET exception occurred, using the retry strategy to fix the exception.',
+          );
         } else if (e.message.indexOf('AliasNotFound') !== -1) {
           throw e;
         } else {
-          this.logger.error(e);
-          process.exit(1);
+          throw new Error(e);
         }
       }
     }
@@ -45,12 +45,11 @@ class FcHelper {
       this.logger.debug(`Begin to list the versions of service: [${serviceName}].`);
       const response = await this.retry('listServiceVersions', serviceName, request);
 
-      this.logger.debug(`ListVersion response: ${JSON.stringify(response, null, 2)}`);
+      this.logger.debug(`ListVersion response: ${JSON.stringify(response, null, 2)}.`);
 
       return response;
     } catch (e) {
-      this.logger.error(e);
-      process.exit(1);
+      throw new Error(e);
     }
   }
 
@@ -61,41 +60,40 @@ class FcHelper {
         `Publish version request: ${JSON.stringify(request, null, 2)}, service: ${serviceName} `,
       );
       const response = await this.retry('publishServiceVersion', serviceName, request);
-      this.logger.debug(`Publish version response: ${JSON.stringify(response, null, 2)}`);
+      this.logger.debug(`Publish version response: ${JSON.stringify(response, null, 2)}.`);
       return response;
     } catch (e) {
-
-      this.logger.error(e);
-      process.exit(1);
+      throw new Error(e);
     }
   }
 
   async createAlias(serviceName, request) {
-    this.logger.debug(`Create alias request: ${JSON.stringify(request, null, 2)}`);
+    this.logger.debug(`Create alias request: ${JSON.stringify(request, null, 2)}.`);
 
     const response = await this.retry('createAlias', serviceName, request);
-    this.logger.debug(`Create alias response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Create alias response: ${JSON.stringify(response, null, 2)}.`);
     return response;
   }
 
   async getAlias(serviceName, aliasName) {
-    this.logger.debug(`Get alias request, serviceName: [${serviceName}], aliasName: [${aliasName}]`);
+    this.logger.debug(
+      `Get alias request, serviceName: [${serviceName}], aliasName: [${aliasName}].`,
+    );
     let response;
     try {
-      response =  await this.retry('getAlias', serviceName, aliasName);
+      response = await this.retry('getAlias', serviceName, aliasName);
     } catch (e) {
-
       throw e;
     }
-    this.logger.debug(`Get alias response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Get alias response: ${JSON.stringify(response, null, 2)}.`);
     return response;
   }
 
   async updateAlias(serviceName, aliasName, request) {
-    this.logger.debug(`Update alias request: ${JSON.stringify(request, null, 2)}`);
+    this.logger.debug(`Update alias request: ${JSON.stringify(request, null, 2)}.`);
 
     const response = await this.retry('updateAlias', serviceName, aliasName, request);
-    this.logger.debug(`Update alias response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Update alias response: ${JSON.stringify(response, null, 2)}.`);
     return response;
   }
 
@@ -103,8 +101,8 @@ class FcHelper {
     const request = new UpdateTriggerRequest({ qualifier: aliasName });
     this.logger.debug(
       `Update Trigger Alias: serviceName: [${serviceName}],` +
-      ` functionName: [${functionName}], triggerName: [${triggerName}],` +
-      ` aliasName: [${aliasName}], request: ${JSON.stringify(request, null, 2)}`,
+        ` functionName: [${functionName}], triggerName: [${triggerName}],` +
+        ` aliasName: [${aliasName}], request: ${JSON.stringify(request, null, 2)}`,
     );
     const response = await this.retry(
       'updateTrigger',
@@ -113,22 +111,21 @@ class FcHelper {
       triggerName,
       request,
     );
-    this.logger.debug(`Update trigger response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Update trigger response: ${JSON.stringify(response, null, 2)}.`);
     return response;
   }
 
   async getCustomDomain(domain) {
-    this.logger.debug(`Get custom domain: [${domain}]`);
+    this.logger.debug(`Get custom domain: [${domain}].`);
     let response;
     try {
       response = await this.retry('getCustomDomain', domain);
     } catch (e) {
       if (e.message.includes('DomainNameNotFound')) {
-        this.logger.error(`Failed to check custom domain: [${domain}], domain not found.`);
-        process.exit(1);
+        throw new Error(`Failed to check custom domain: [${domain}], domain not found.`);
       }
     }
-    this.logger.debug(`Get custom domain response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Get custom domain response: ${JSON.stringify(response, null, 2)}.`);
     return response;
   }
 
@@ -142,7 +139,7 @@ class FcHelper {
       )}, domainName: [${domainName}]`,
     );
     const response = await this.retry('updateCustomDomain', domainName, request);
-    this.logger.debug(`Update custom domain response: ${JSON.stringify(response, null, 2)}`);
+    this.logger.debug(`Update custom domain response: ${JSON.stringify(response, null, 2)}.`);
     return response;
   }
 }
