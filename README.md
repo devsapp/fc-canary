@@ -74,7 +74,7 @@ actions:
   ```
 * `canaryWeight`：手动灰度，直接对灰度版本设置对应的权重，1 <= weight <= 100, 且 weight 为整数。
 ### 工作流程
-![alt](https://img.alicdn.com/imgextra/i2/O1CN01bQwddc1TlmQCZEgAQ_!!6000000002423-2-tps-2682-1144.png)
+![alt](https://img.alicdn.com/imgextra/i2/O1CN01ivqpnL1fiMrIzbGD1_!!6000000004040-2-tps-1122-483.png)
 
 ## 操作案例
 ### 单函数发布
