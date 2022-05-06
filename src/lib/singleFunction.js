@@ -1,7 +1,7 @@
-const { FcHelper } = require('../bin/FcHelper');
+const { FcHelper } = require('../bin/fcHelper');
 const { printObject } = require('../utils/objectUtils');
 const { validateParams, checkCanaryPolicy } = require('./validate/validateArgs');
-const { FunctionHelper } = require('../bin/FunctionHelper');
+const { FunctionHelper } = require('../bin/functionHelper');
 const { canaryWeightHelper } = require('./canary/canaryWeight');
 const { fullyReleaseHelper } = require('./canary/fullyRelease');
 const { Logger } = require('@serverless-devs/core');
