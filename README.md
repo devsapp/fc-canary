@@ -30,6 +30,9 @@ actions:
         #     intervalMinutes: 5
         #   - weight: 30
         #     intervalMinutes: 10
+        # linearStep:
+        # weight: 20
+        # interval: 1
 ```
 
 ### 基本参数
@@ -44,7 +47,7 @@ actions:
 ### 灰度策略
 描述具体的灰度策略，以下参数只能选择一个，如果不指定则不进行灰度，直接将新版本的权重设置成100
 * `canaryStep`: 灰度发布，灰度指定流量，间隔指定时间后再灰度剩余流量
-  * `weight`: 灰度流量(百分比)，`必填`
+  * `weight`: 灰度流量(百分比)，`必填`，1 <= weight <= 100, 且 weight 为整数。
   * `interval`: 灰度间隔(分钟)，非必填，默认值 10
   ```yaml
   canaryStep:
@@ -52,7 +55,7 @@ actions:
     interval: 10
   ```
 * `linearStep`：分批发布，每批固定流量，间隔指定时间后再开始下一个批次
-  * `weight`: 灰度流量(百分比)，`必填`
+  * `weight`: 灰度流量(百分比)，`必填`，1 <= weight <= 100, 且 weight 为整数。
   * `interval`: 灰度间隔(分钟)，非必填，默认值 1
   ```yaml
   linearStep:
@@ -60,7 +63,7 @@ actions:
     interval: 2
   ```
 * `canaryPlans`：数组，自定义灰度批次
-  * `weight`: 灰度流量(百分比)，`必填`
+  * `weight`: 灰度流量(百分比)，`必填`，1 <= weight <= 100, 且 weight 为整数。
   * `interval`: 灰度间隔(分钟)，`必填`
   ```yaml
   canaryPlans: # 10% -> (5分钟后) 50% > (10分钟后) 100%
@@ -69,7 +72,9 @@ actions:
     - weight: 50
       interval: 10
   ```
-* `canaryWeight`：手动灰度，直接对灰度版本设置对应的权重
+* `canaryWeight`：手动灰度，直接对灰度版本设置对应的权重，1 <= weight <= 100, 且 weight 为整数。
+### 工作流程
+![alt](https://img.alicdn.com/imgextra/i2/O1CN01bQwddc1TlmQCZEgAQ_!!6000000002423-2-tps-2682-1144.png)
 
 ## 操作案例
 ### 单函数发布
@@ -136,8 +141,10 @@ services:
    3. 更新别名，为版本 new 分配 10% 流量，版本 base 分配 90% 流量
    4. 等待2分钟
    5. 更新别名，为版本 new 分配 100% 流量
-
+   
 ![alt](https://img.alicdn.com/imgextra/i1/O1CN01exh14j1Wsb9zOcAIU_!!6000000002844-2-tps-2248-508.png)
+
+
 
 ### 多函数发布
 ```yaml
