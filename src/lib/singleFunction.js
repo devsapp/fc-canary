@@ -5,7 +5,7 @@ const {
   validateBaseVersion,
   isNoVersionInProject,
 } = require('./validate/validateArgs');
-const { FunctionHelper } = require('./functionHelper');
+const { FunctionHelper } = require('./fc/functionHelper');
 const { canaryWeightHelper } = require('./canary/canaryWeight');
 const { fullyReleaseHelper } = require('./canary/fullyRelease');
 const { Logger } = require('@serverless-devs/core');
