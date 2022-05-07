@@ -1,59 +1,31 @@
-
-
-async function canaryWeightHelper(
+function canaryWeightHelper(
   getAliasResponse,
   functionHelper,
   argService,
   baseVersion,
   description,
-  newCreatedVersion,
+  canaryVersion,
   aliasName,
   triggers,
   functionName,
   canaryWeight,
   customDomainList,
-  logger,
 ) {
-  // alias
-  if (getAliasResponse == undefined) {
-    await functionHelper.createAlias(
-      argService,
-      baseVersion,
-      aliasName,
-      description,
-      newCreatedVersion,
-      canaryWeight,
-    );
-  } else {
-    await functionHelper.updateAlias(
-      argService,
-      baseVersion,
-      aliasName,
-      description,
-      newCreatedVersion,
-      canaryWeight,
-    );
-  }
-
-  // trigger
-  await functionHelper.updateTriggerListByAlias(triggers, functionName, aliasName, argService);
-
-  // custom domain:
-  await functionHelper.updateCustomDomainListByAlias(
-    argService,
+  let plan = {
+    typeName: 'canaryWeight',
     customDomainList,
-    aliasName,
+    service: argService,
     functionName,
-  );
-
-  logger.info(
-    `Successfully completed the canaryWeight release: ${
-      100 - Math.round(canaryWeight * 100)
-    }% traffic to baseVersion: [${baseVersion}], ${Math.round(
-      canaryWeight * 100,
-    )}% traffic to new created version: [${newCreatedVersion}].`,
-  );
-  logger.info(`CanaryWeight release completed.`);
+    triggers,
+    alias: aliasName,
+    canaryVersion,
+    description,
+    baseVersion,
+    jobs: [{ weight: canaryWeight / 100 }],
+  };
+  // alias
+  plan.isAliasExisted = getAliasResponse != undefined;
+  return plan;
 }
 
 module.exports = {

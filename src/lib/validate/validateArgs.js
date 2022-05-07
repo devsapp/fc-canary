@@ -1,79 +1,43 @@
 const _ = require('lodash');
+const assert = require('assert');
 
 /**
- * except for checking args and inputs,
- * this function also check canary policy and parse it into variable policy and return
+ *
  * @param logger
- * @param serviceName
- * @param functionName
- * @param inputs
- * @param args
- * @param fcHelper
- * @returns {Promise<*>}
+ * @param params
+ * @returns {Promise<void>}
  */
-async function validateParams(
-  logger,
-  serviceName,
-  functionName,
-  inputs,
-  args,
-  fcHelper,
-) {
-
-
-  if (serviceName == undefined) {
+async function validateParams(logger, params) {
+  if (params.serviceName == undefined) {
     throw new Error(`Missing service name in inputs.`);
-
   }
-  if (functionName == undefined) {
+  if (params.functionName == undefined) {
     throw new Error(`Missing function name in inputs.`);
-
   }
-
-  await validateArgs(inputs, args, logger, fcHelper);
-
   // check user's custom_domain.
-  const {custom_domain: customDomainList = []} = inputs.output && inputs.output.url;
-  if (customDomainList.constructor.name !== 'Array') {
+  if (params.customDomainList.constructor.name !== 'Array') {
     throw new Error(`Failed to parse custom domains.`);
-
   }
 }
 
-function checkCanaryPolicy(args, logger) {
-  // check user's canary strategy.
-  const policy = parseCanaryPolicy(args, logger);
-  if (_.isEmpty(policy)) {
-    throw new Error(`Failed to parse the canary policy. Please double-check the configuration.`);
+/**
+ * check if there is no version in the project.
+ * @param functionHelper
+ * @param service
+ * @returns {Promise<boolean>}
+ */
+async function isNoVersionInProject (functionHelper, service) {
 
+  const response = await functionHelper.listVersion(service, undefined, undefined);
+  if (
+    response == undefined ||
+    response.body == undefined ||
+    response.body.versions == undefined ||
+    typeof response.body.versions[Symbol.iterator] !== 'function'
+  ) {
+    throw new Error('Listing versions error, please contact the staff.');
   }
-  return policy;
-}
-
-async function validateArgs(inputs, args, logger, fcHelper) {
-  const {service, baseVersion} = args;
-  let baseVersionArgs = baseVersion;
-  if (baseVersionArgs != undefined) {
-    baseVersionArgs = baseVersionArgs.toString();
-  }
-  // check whether service in the plugin args is equal to the service deployed.
-  let curService;
-  if (service != undefined) {
-    const serviceDeployed =
-      inputs && inputs.props && inputs.props.service && inputs.props.service.name;
-    if (serviceDeployed !== service) {
-      throw new Error(
-        `The service names in args [${service}] and inputs [${serviceDeployed}] are different.`,
-      );
-    }
-    curService = service;
-  } else {
-    curService = _.get(inputs, 'props.service.name');
-  }
-
-  if (baseVersionArgs != undefined) {
-    await validateBaseVersion(curService, baseVersionArgs, fcHelper, logger);
-  }
+  return response.body.versions.length === 0;
 }
 
 /**
@@ -103,21 +67,18 @@ function parseCanaryPolicy(args, logger) {
   logger.debug(`User input canary policy: ${JSON.stringify(policies)}.`);
 
   if (policies.length === 0) {
-    if (args.baseVersion !== null) {
-      logger.warn(`No canary policy found, the system will perform a full release.`);
-    }
+    logger.warn(`No canary policy found, the system will perform a full release.`);
 
     response.key = 'full';
     response.value = 100;
   } else if (policies.length > 1) {
+
     throw new Error(
       `Only one canary policy can be selected, but [${policies.length}] canary policies are found.`,
     );
   } else {
     // begin validate the strategy
     const canaryPolicyName = policies[0];
-    // only canaryPlans input is an array.
-    logger.info(`Canary Policy: [${canaryPolicyName}].`);
 
     if (canaryPolicyName === 'canaryPlans') {
       // each plan in canaryPlans can't have a weight > 100
@@ -132,37 +93,22 @@ function parseCanaryPolicy(args, logger) {
 
       for (const plan of _.get(args, 'canaryPlans')) {
         logger.debug(`plan: ${JSON.stringify(plan, null, 2)}.`);
-        if (plan.weight == undefined) {
-          throw new Error(`Missing weight in canaryPlans' configuration.`);
-        }
-        if (Math.round(plan.weight) !== plan.weight) {
-          logger.debug(`Round weight: ${Math.round(plan.weight)}.`);
-          throw new Error(`Weight must be number, current weight: [${plan.weight}].`);
-        }
-        if (plan.interval == undefined) {
-          throw new Error(`Missing interval in canaryPlans' configuration.`);
-        } else {
-          if (isNaN(plan.interval)) {
-            throw new Error(`Interval must be number. Wrong value: [${plan.interval}].`);
-          } else {
-            if (Math.round(plan.interval) !== plan.interval) {
-              throw new Error(`Interval must be Integer. Wrong value: [${plan.interval}].`);
-            } else {
-              if (plan.interval < 1) {
-                throw new Error(`Interval must be equal to or larger than 1: [${plan.interval}].`);
-              }
-            }
-          }
-        }
+        assert(
+          plan.weight &&
+            _.isNumber(plan.weight) &&
+            Math.round(plan.weight) === plan.weight &&
+            plan.weight >= 1 &&
+            plan.weight <= 100,
+          `Weight must be set as an integer, and 1 <= weight <= 100. `,
+        );
 
-        if (plan.weight > 100) {
-          throw new Error(
-            `Weight must be less than or equal to 100. Wrong value: [${plan.weight}].`,
-          );
-        }
-        if (plan.weight < 1) {
-          throw new Error(`Weight must be equal to or more than 1. Wrong value: [${plan.weight}].`);
-        }
+        assert(
+          plan.interval &&
+            _.isNumber(plan.interval) &&
+            Math.round(plan.interval) === plan.interval &&
+            plan.interval >= 1,
+          `Interval must be set as an integer, and 1 <= interval. `,
+        );
       }
       response.key = 'canaryPlans';
       response.value = _.get(args, 'canaryPlans');
@@ -171,30 +117,21 @@ function parseCanaryPolicy(args, logger) {
     // linearStep and canaryStep
     if (canaryPolicyName === 'linearStep' || canaryPolicyName === 'canaryStep') {
       const canaryPolicy = _.get(args, canaryPolicyName);
-
       if (canaryPolicy == undefined) {
         throw new Error(
           `Format error, missing configuration in [${canaryPolicyName}], please check the configuration.`,
         );
       }
 
-      if (canaryPolicy.weight == undefined) {
-        throw new Error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
-      }
-      if (Math.round(canaryPolicy.weight) !== canaryPolicy.weight) {
-        logger.debug(`Round weight: ${Math.round(canaryPolicy.weight)}.`);
-        throw new Error(`Weight must be number, current weight: [${canaryPolicy.weight}].`);
-      }
-      if (canaryPolicy.weight > 100) {
-        throw new Error(
-          `Weight must be less than or equal to 100. Wrong value: [${canaryPolicy.weight}]`,
-        );
-      }
-      if (canaryPolicy.weight < 1) {
-        throw new Error(
-          `Weight must be equal to or more than 1. Wrong value: [${canaryPolicy.weight}].`,
-        );
-      }
+      assert(
+        canaryPolicy.weight &&
+          _.isNumber(canaryPolicy.weight) &&
+          Math.round(canaryPolicy.weight) === canaryPolicy.weight &&
+          canaryPolicy.weight >= 1 &&
+          canaryPolicy.weight <= 100,
+        `Weight must be set as an integer, and 1 <= weight <= 100. `,
+      );
+
       if (canaryPolicy.interval == undefined) {
         if (canaryPolicyName === 'linearStep') {
           logger.warn(`No interval found, the system defaults to using 1 minute as the interval`);
@@ -205,42 +142,29 @@ function parseCanaryPolicy(args, logger) {
           canaryPolicy.interval = 10;
         }
       } else {
-        if (isNaN(canaryPolicy.interval)) {
-          throw new Error(`Interval must be number. Wrong value: [${canaryPolicy.interval}].`);
-        } else {
-          if (Math.round(canaryPolicy.interval) !== canaryPolicy.interval) {
-            throw new Error(`Interval must be Integer. Wrong value: [${canaryPolicy.interval}].`);
-          } else {
-            if (canaryPolicy.interval < 1) {
-              throw new Error(
-                `Interval must be equal to or larger than 1: [${canaryPolicy.interval}]`,
-              );
-            }
-          }
-        }
+        assert(
+          _.isNumber(canaryPolicy.interval) &&
+            Math.round(canaryPolicy.interval) === canaryPolicy.interval &&
+            canaryPolicy.interval >= 1,
+          `Interval must be set as an integer, and 1 <= interval. `,
+        );
       }
-
       response.key = `${canaryPolicyName}`;
-      response.value = _.get(args, `${canaryPolicyName}`);
+      response.value = canaryPolicy;
     }
 
     // canaryWeight
     if (canaryPolicyName === 'canaryWeight') {
       const canaryWeight = _.get(args, 'canaryWeight');
-      if (canaryWeight == undefined) {
-        throw new Error(`Missing weight in [${canaryPolicyName}]'s configuration.`);
-      }
-      if (Math.round(canaryWeight) !== canaryWeight) {
-        logger.debug(`Round weight: ${Math.round(canaryWeight)}.`);
-        throw new Error(`Weight must be number, current weight: [${canaryWeight}].`);
-      }
 
-      if (canaryWeight > 100) {
-        throw new Error(`Weight must be less than or equal to 100. Wrong value: [${canaryWeight}]`);
-      }
-      if (canaryWeight < 1) {
-        throw new Error(`Weight must be equal to or more than 1. Wrong value: [${canaryWeight}].`);
-      }
+      assert(
+        canaryWeight &&
+          _.isNumber(canaryWeight) &&
+          Math.round(canaryWeight) === canaryWeight &&
+          canaryWeight >= 1 &&
+          canaryWeight <= 100,
+        `Weight must be set as an integer, and 1 <= weight <= 100. `,
+      );
 
       response.key = 'canaryWeight';
       response.value = canaryWeight;
@@ -258,11 +182,12 @@ function parseCanaryPolicy(args, logger) {
  * @returns {Promise<void>}
  */
 async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger) {
-  if (isNaN(baseVersionArgs)) {
-    throw new Error(
-      `BaseVersion must be a number, baseVersion: [${baseVersionArgs}], typeof current baseVersion: [${typeof baseVersionArgs}]`,
-    );
-  }
+  assert(
+    !isNaN(baseVersionArgs) &&
+      parseFloat(baseVersionArgs) === Math.round(parseFloat(baseVersionArgs)) &&
+      parseFloat(baseVersionArgs) > 0,
+    `BaseVersion must be a Integer, and 0 < baseVersion`,
+  );
 
   const response = await helper.listVersion(serviceName, 1, baseVersionArgs);
 
@@ -271,7 +196,6 @@ async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger)
       `No response found when list versions of service: [${serviceName}]. Please contact staff.`,
     );
   }
-
   if (
     response.body.versions.length === 0 ||
     response.body.versions[0].versionId !== baseVersionArgs
@@ -282,4 +206,4 @@ async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger)
   }
 }
 
-module.exports = { validateParams, checkCanaryPolicy };
+module.exports = { validateParams, parseCanaryPolicy, validateBaseVersion, isNoVersionInProject };

@@ -17,7 +17,6 @@ actions:
   post-deploy: # 在deploy之后运行
     - plugin: fc-canary
       args:
-        service: test-service
         alias: stable
         description: 'test canary'
         baseVersion: 1 #基线版本，如果指定则使用该版本做为主版本和灰度版本进行切换
@@ -39,7 +38,6 @@ actions:
 
 | 参数名称        | 参数含义                                                                                                                 | 必填    | 默认值                            | 例子             |
 |-------------|----------------------------------------------------------------------------------------------------------------------|-------|--------------------------------|----------------|
-| service     | 服务名称。不指定则使用关联组件的 `${serviceName}`                                                                                    | false | 关联组件的 `${serviceName}`         | demo-service   |
 | alias       | 别名。 不指定则使用 `${functionName}_stable`                                                                                  | false | 关联组件的 `${functionName}_stable` | stable         |
 | description | 发布描述。版本及别名都使用该描述                                                                                                     | false | ''                             | canary testing |
 | baseVersion | 基线版本。如果指定则使用该版本做为主版本和灰度版本进行切换<br/> Full release 时不可以配置baseVersion.  | false | BaseVersion未填写时，系统将把baseVersion设置为新创建version的前一个                           | 1              |

@@ -1,15 +1,19 @@
-const { FcHelper } = require('../bin/fcHelper');
 const { printObject } = require('../utils/objectUtils');
-const { validateParams, checkCanaryPolicy } = require('./validate/validateArgs');
-const { FunctionHelper } = require('../bin/functionHelper');
+const {
+  validateParams,
+  parseCanaryPolicy,
+  validateBaseVersion,
+  isNoVersionInProject,
+} = require('./validate/validateArgs');
+const { FunctionHelper } = require('./functionHelper');
 const { canaryWeightHelper } = require('./canary/canaryWeight');
 const { fullyReleaseHelper } = require('./canary/fullyRelease');
 const { Logger } = require('@serverless-devs/core');
 const logger = new Logger('fc-canary');
 const { canaryStepHelper } = require('./canary/canaryStep');
 const { canaryPlansHelper } = require('./canary/canaryPlans');
-const { linerStepHelper } = require('./canary/linerStep');
-
+const { linearStepHelper } = require('./canary/linearStep');
+const { CanaryWorker } = require('../lib/canary/canaryWorker');
 
 /**
  * if the yaml contains single function.
@@ -24,8 +28,7 @@ async function singleFunc(inputs, args) {
     regionId: inputs.props && inputs.props.region,
   };
 
-  const fcHelper = new FcHelper(config, logger);
-  const functionHelper = new FunctionHelper(fcHelper, logger);
+  const functionHelper = new FunctionHelper(logger, config);
 
   delete inputs.credentials;
   logger.debug(`Inputs params without credentials: ${JSON.stringify(inputs, null, 2)}.`);
@@ -34,152 +37,141 @@ async function singleFunc(inputs, args) {
   const functionName = inputs.props && inputs.props.function && inputs.props.function.name;
   const serviceName = inputs.props && inputs.props.service && inputs.props.service.name;
   const { triggers = [] } = inputs.props;
-
   // TODO 会不会上个post插件删除inputs.output导致我这里拿不到custom domain
   const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
 
-  // validate
-  await validateParams(logger, serviceName, functionName, inputs, args, fcHelper);
+  const { baseVersion, description = '', alias: aliasName = `${functionName}_stable` } = args;
 
-  const policy = checkCanaryPolicy(args, logger);
+  const params = { functionName, serviceName, customDomainList };
+
+  await validateParams(logger, params);
+
+  let policy = parseCanaryPolicy(args, logger);
+  if (policy.key !== 'full' && (await isNoVersionInProject(functionHelper, serviceName))) {
+    policy.key = 'full';
+    policy.value = 100;
+  }
+  logger.info(`Canary Policy: [${policy.key}] release.`);
+
+  let baseVersionArgs;
+  if (baseVersion !== undefined && policy.key !== 'full') {
+    // if baseVersion is set, we convert it to a string.
+    baseVersionArgs = baseVersion.toString();
+    await validateBaseVersion(serviceName, baseVersionArgs, functionHelper, logger);
+  }
 
   logger.info('Successfully checked args, inputs and canary policy.');
 
-  const {
-    service: argService = serviceName,
-    baseVersion = undefined,
-    description = '',
-    alias: aliasName = `${functionName}_stable`,
-  } = args;
-
-  // if baseVersion is set, we convert it to a string.
-  let baseVersionArgs = baseVersion;
-  if (baseVersionArgs != undefined) {
-    baseVersionArgs = baseVersionArgs.toString();
-  }
-  // publish a new version.
-
   logger.debug(`Begin to publish a new version, serviceName: [${serviceName}].`);
-  const newCreatedVersion = await functionHelper.publishVersion(argService, description);
-  logger.info(`Successfully published the version: [${newCreatedVersion}].`);
+  const canaryVersion = await functionHelper.publishVersion(serviceName, description);
+  logger.info(`Successfully published the version: [${canaryVersion}].`);
 
   logger.debug(`Begin to check the existence of alias: [${aliasName}].`);
-  const getAliasResponse = await functionHelper.getAlias(argService, aliasName);
+  const getAliasResponse = await functionHelper.getAlias(serviceName, aliasName);
   logger.info(
     `Successfully checked the existence of alias: [${aliasName}] ${
       getAliasResponse == undefined ? "doesn't exist, and we will create it soon" : 'exists'
     }.`,
   );
+
   if (policy.key === 'full') {
-    await fullyReleaseHelper(
+    const plan = fullyReleaseHelper(
       getAliasResponse,
       functionHelper,
-      argService,
+      serviceName,
       description,
-      newCreatedVersion,
+      canaryVersion,
       aliasName,
       triggers,
       functionName,
       customDomainList,
-      logger,
     );
+    const worker = new CanaryWorker(logger, plan, functionHelper);
+    await worker.doJobs();
   } else {
     // 寻找baseVersion
-
     const baseVersion = await functionHelper.findBaseVersion(
       baseVersionArgs,
       aliasName,
-      argService,
-      newCreatedVersion,
+      serviceName,
+      canaryVersion,
       getAliasResponse,
     );
-
-    if (baseVersion === newCreatedVersion) {
-      logger.warn(
-        `The first release must be a full release, automatically ignoring the canary configuration.`,
-      );
-
-      await fullyReleaseHelper(
-        getAliasResponse,
-        functionHelper,
-        argService,
-        description,
-        newCreatedVersion,
-        aliasName,
-        triggers,
-        functionName,
-        customDomainList,
-        logger,
-      );
-
-      return;
-    }
-
     if (policy.key === 'canaryWeight') {
-      await canaryWeightHelper(
+      const plan = canaryWeightHelper(
         getAliasResponse,
         functionHelper,
-        argService,
+        serviceName,
         baseVersion,
         description,
-        newCreatedVersion,
+        canaryVersion,
         aliasName,
         triggers,
         functionName,
-        policy.value / 100,
+        policy.value,
         customDomainList,
-        logger,
       );
+      const worker = new CanaryWorker(logger, plan, functionHelper);
+      await worker.doJobs();
+      logger.info(`CanaryWeight release completed.`);
     }
 
     if (policy.key === 'canaryStep') {
-      await canaryStepHelper(
+      const plan = canaryStepHelper(
         getAliasResponse,
         functionHelper,
-        argService,
+        serviceName,
         baseVersion,
         description,
-        newCreatedVersion,
+        canaryVersion,
         aliasName,
         triggers,
         functionName,
         policy.value,
         customDomainList,
-        logger,
       );
+      const worker = new CanaryWorker(logger, plan, functionHelper);
+      await worker.doJobs();
+      logger.info(`CanaryWeight release completed.`);
     }
+
     if (policy.key === 'canaryPlans') {
-      await canaryPlansHelper(
+      const plan = canaryPlansHelper(
         getAliasResponse,
         functionHelper,
-        argService,
+        serviceName,
         baseVersion,
         description,
-        newCreatedVersion,
+        canaryVersion,
         aliasName,
         triggers,
         functionName,
         policy.value,
         customDomainList,
-        logger,
       );
+
+      const worker = new CanaryWorker(logger, plan, functionHelper);
+      await worker.doJobs();
+      logger.info(`CanaryPlan release completed.`);
     }
 
     if (policy.key == 'linearStep') {
-      await linerStepHelper(
+      const plan = linearStepHelper(
         getAliasResponse,
         functionHelper,
-        argService,
+        serviceName,
         baseVersion,
         description,
-        newCreatedVersion,
+        canaryVersion,
         aliasName,
         triggers,
         functionName,
         policy.value,
         customDomainList,
-        logger,
       );
+      const worker = new CanaryWorker(logger, plan, functionHelper);
+      await worker.doJobs();
+      logger.info(`LinearStep release completed.`);
     }
   }
 }

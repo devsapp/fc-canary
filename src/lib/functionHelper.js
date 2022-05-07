@@ -1,10 +1,44 @@
 const _ = require('lodash');
-const { CreateAliasRequest, UpdateAliasRequest } = require('@alicloud/fc-open20210406');
+const {
+  CreateAliasRequest,
+  UpdateAliasRequest,
+  PublishServiceVersionRequest,
+  ListServiceVersionsRequest,
+  UpdateTriggerRequest,
+  UpdateCustomDomainRequest,
+} = require('@alicloud/fc-open20210406');
+const Client = require('@alicloud/fc-open20210406').default;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 class FunctionHelper {
-  constructor(helper, logger) {
-    this.helper = helper;
+  constructor(logger, config) {
     this.logger = logger;
+    this.client = new Client(config);
+  }
+
+  /**
+   * retry 是为了保证在系统抛出ECONNRESET 异常时重试并完成创建、更新资源。
+   *
+   * @param fnName
+   * @param args
+   * @returns {Promise<*>}
+   */
+  async retry(fnName, ...args) {
+    const maxRetries = 5;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await this.client[fnName](...args);
+      } catch (e) {
+        if (e.code === 'ECONNRESET') {
+          this.logger.debug(
+            'An ECONNRESET exception occurred, using the retry strategy to fix the exception.',
+          );
+          await sleep(80);
+        } else {
+          throw new Error(e);
+        }
+      }
+    }
   }
 
   /**
@@ -14,7 +48,18 @@ class FunctionHelper {
    * @returns {Promise<*>}
    */
   async publishVersion(serviceName, description) {
-    const response = await this.helper.publishVersion(serviceName, description);
+    let response;
+    try {
+      const request = new PublishServiceVersionRequest({ description });
+      this.logger.debug(
+        `Publish version request: ${JSON.stringify(request, null, 2)}, service: ${serviceName} `,
+      );
+      response = await this.retry('publishServiceVersion', serviceName, request);
+      this.logger.debug(`Publish version response: ${JSON.stringify(response, null, 2)}.`);
+    } catch (e) {
+      throw new Error(e);
+    }
+
     if (
       response == undefined ||
       response.body == undefined ||
@@ -41,17 +86,11 @@ class FunctionHelper {
    * @param baseVersionArgs
    * @param aliasName
    * @param serviceName
-   * @param newCreatedVersion
+   * @param canaryVersion
    * @param getAliasResponse
    * @returns {Promise<*>}
    */
-  async findBaseVersion(
-    baseVersionArgs,
-    aliasName,
-    serviceName,
-    newCreatedVersion,
-    getAliasResponse,
-  ) {
+  async findBaseVersion(baseVersionArgs, aliasName, serviceName, canaryVersion, getAliasResponse) {
     let baseVersion = baseVersionArgs;
     if (baseVersionArgs == undefined) {
       // if aliasName exists, set the version of the aliasName to baseVersion
@@ -63,7 +102,7 @@ class FunctionHelper {
         }
         baseVersion = getAliasResponse.body.versionId;
       } else {
-        const getVersionResponse = await this.helper.listVersion(serviceName, 2, newCreatedVersion);
+        let getVersionResponse = await this.listVersion(serviceName, 2, canaryVersion);
 
         if (
           getVersionResponse == undefined ||
@@ -77,14 +116,14 @@ class FunctionHelper {
         }
 
         const versionIdList = getVersionResponse.body.versions;
-        if (versionIdList.length === 0 || versionIdList[0].versionId !== newCreatedVersion) {
-          throw new Error(`New created version: [${newCreatedVersion}] has been deleted.`);
+        if (versionIdList.length === 0 || versionIdList[0].versionId !== canaryVersion) {
+          throw new Error(`New created version: [${canaryVersion}] has been deleted.`);
+        } else if (versionIdList.length === 1) {
+          // if there is only new canaryVersion, in parseCanaryPolicy method will catch it and set the policy to full release,
+          // there is no way to get here.
+          throw new Error(`System error, the length of versionList of project is changed during the process.`)
         } else {
-          if (versionIdList.length === 1) {
-            baseVersion = newCreatedVersion;
-          } else {
-            baseVersion = versionIdList[1].versionId;
-          }
+          baseVersion = versionIdList[1].versionId;
         }
       }
     }
@@ -93,15 +132,15 @@ class FunctionHelper {
     return baseVersion;
   }
 
-  async createAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
+  async createAlias(serviceName, baseVersion, aliasName, description, canaryVersion, weight) {
     this.logger.debug(`Begin to create a new Alias: [${aliasName}].`);
     if (baseVersion == undefined) {
       throw new Error('BaseVersion must be set when creating a new alias.');
     }
     let request;
 
-    // if newCreatedVersion == undefined, it means it is a full release.
-    if (newCreatedVersion == undefined) {
+    // if canaryVersion == undefined, it means it is a full release.
+    if (canaryVersion == undefined) {
       request = new CreateAliasRequest({
         aliasName: aliasName,
         description: description,
@@ -112,10 +151,18 @@ class FunctionHelper {
         aliasName: aliasName,
         description: description,
         versionId: baseVersion,
-        additionalVersionWeight: { [newCreatedVersion]: weight },
+        additionalVersionWeight: { [canaryVersion]: weight },
       });
     }
-    const createAliasResponse = await this.helper.createAlias(serviceName, request);
+    this.logger.debug(`Create alias request: ${JSON.stringify(request, null, 2)}.`);
+    let createAliasResponse;
+    try {
+      createAliasResponse = await this.retry('createAlias', serviceName, request);
+      this.logger.debug(`Create alias response: ${JSON.stringify(createAliasResponse, null, 2)}.`);
+    } catch (e) {
+      throw e;
+    }
+
     if (createAliasResponse == undefined || createAliasResponse.body == undefined) {
       throw new Error(
         `No response found when creating a new alias: [${aliasName}]. Please contact staff.`,
@@ -129,17 +176,17 @@ class FunctionHelper {
     this.logger.info(`Successfully created a new Alias: [${aliasName}].`);
   }
 
-  async updateAlias(serviceName, baseVersion, aliasName, description, newCreatedVersion, weight) {
+  async updateAlias(serviceName, baseVersion, aliasName, description, canaryVersion, weight) {
     this.logger.debug(`Begin to update a Alias: [${aliasName}].`);
     let request;
     if (baseVersion == undefined) {
       // if there is no baseVersionId, fully release.
       request = new UpdateAliasRequest({
         description: description,
-        additionalVersionWeight: { [newCreatedVersion]: weight },
+        additionalVersionWeight: { [canaryVersion]: weight },
       });
     } else {
-      if (newCreatedVersion == undefined) {
+      if (canaryVersion == undefined) {
         request = new UpdateAliasRequest({
           versionId: baseVersion,
           description: description,
@@ -148,11 +195,18 @@ class FunctionHelper {
         request = new UpdateAliasRequest({
           versionId: baseVersion,
           description: description,
-          additionalVersionWeight: { [newCreatedVersion]: weight },
+          additionalVersionWeight: { [canaryVersion]: weight },
         });
       }
     }
-    const updateAliasResponse = await this.helper.updateAlias(serviceName, aliasName, request);
+    let updateAliasResponse;
+    try {
+      this.logger.debug(`Update alias request: ${JSON.stringify(request, null, 2)}.`);
+      updateAliasResponse = await this.retry('updateAlias', serviceName, aliasName, request);
+      this.logger.debug(`Update alias response: ${JSON.stringify(updateAliasResponse, null, 2)}.`);
+    } catch (e) {
+      throw e;
+    }
     if (updateAliasResponse == undefined || updateAliasResponse.body == undefined) {
       throw new Error(
         `No response found when updating an alias: [${aliasName}]. Please contact the staff.`,
@@ -170,7 +224,11 @@ class FunctionHelper {
   async getAlias(serviceName, aliasName) {
     let getAliasResponse;
     try {
-      getAliasResponse = await this.helper.getAlias(serviceName, aliasName);
+      this.logger.debug(
+        `Get alias request, serviceName: [${serviceName}], aliasName: [${aliasName}].`,
+      );
+      getAliasResponse = await this.retry('getAlias', serviceName, aliasName);
+      this.logger.debug(`Get alias response: ${JSON.stringify(getAliasResponse, null, 2)}.`);
       if (
         getAliasResponse == undefined ||
         getAliasResponse.body == undefined ||
@@ -182,13 +240,10 @@ class FunctionHelper {
       }
     } catch (e) {
       // if Alias not found, the system will throw an error, we use this to check whether alias exists.
-      // warn: 在FcHelper.js retry方法捕获！！！
       if (e.message.indexOf('AliasNotFound') !== -1) {
         // do nothing
       } else {
-        throw new Error(
-          `System error, error_code: [${e.code}], error_message: [${e.message}], please contact the staff.`,
-        );
+        throw e;
       }
     }
     return getAliasResponse;
@@ -197,12 +252,21 @@ class FunctionHelper {
   async updateTriggerListByAlias(triggers, functionName, aliasName, serviceName) {
     this.logger.debug(`Begin to update triggers.`);
     for (const item of triggers) {
-      const response = await this.helper.updateTriggerAlias(
-        serviceName,
-        functionName,
-        item.name,
-        aliasName,
-      );
+      let response;
+      try {
+        const request = new UpdateTriggerRequest({ qualifier: aliasName });
+
+        this.logger.debug(
+          `Update Trigger Alias: serviceName: [${serviceName}],` +
+            ` functionName: [${functionName}], triggerName: [${item.name}],` +
+            ` aliasName: [${aliasName}], request: ${JSON.stringify(request, null, 2)}`,
+        );
+
+        response = await this.retry('updateTrigger', serviceName, functionName, item.name, request);
+        this.logger.debug(`Update trigger response: ${JSON.stringify(response, null, 2)}.`);
+      } catch (e) {
+        throw e;
+      }
       if (
         response == undefined ||
         response.body == undefined ||
@@ -241,8 +305,18 @@ class FunctionHelper {
 
       const regex = /^https?\:\/\//i;
       const domainName = item.domain.replace(regex, '');
-      this.logger.debug(`Begin to check custom domain: [${domainName}].`);
-      const response = await this.helper.getCustomDomain(domainName);
+      this.logger.debug(`Get custom domain: [${domainName}].`);
+      let response;
+      try {
+        response = await this.retry('getCustomDomain', domainName);
+      } catch (e) {
+        if (e.message.includes('DomainNameNotFound')) {
+          throw new Error(`Failed to check custom domain: [${domainName}], domain not found.`);
+        } else {
+          throw e;
+        }
+      }
+      this.logger.debug(`Get custom domain response: ${JSON.stringify(response, null, 2)}.`);
 
       if (
         response == undefined ||
@@ -267,7 +341,26 @@ class FunctionHelper {
         }
       }
       this.logger.debug(`Begin to update custom domain [${domainName}] with alias [${aliasName}]`);
-      const updateCustomDomainResponse = await this.helper.updateCustomDomain(domainName, routes);
+
+      let updateCustomDomainResponse;
+      try {
+        const request = new UpdateCustomDomainRequest({ routeConfig: { routes: routes } });
+        this.logger.debug(
+          `Update custom domain request: ${JSON.stringify(
+            request,
+            null,
+            2,
+          )}, domainName: [${domainName}]`,
+        );
+
+        updateCustomDomainResponse = await this.retry('updateCustomDomain', domainName, request);
+        this.logger.debug(
+          `Update custom domain response: ${JSON.stringify(updateCustomDomainResponse, null, 2)}.`,
+        );
+      } catch (e) {
+        throw e;
+      }
+
       if (
         updateCustomDomainResponse == undefined ||
         updateCustomDomainResponse.body == undefined ||
@@ -304,6 +397,20 @@ class FunctionHelper {
       );
     }
     this.logger.debug(`Finish updating custom domains.`);
+  }
+
+  async listVersion(serviceName, Limit, startKey) {
+    const request = new ListServiceVersionsRequest({ limit: Limit, startKey: startKey });
+    try {
+      this.logger.debug(`Begin to list the versions of service: [${serviceName}].`);
+      const response = await this.retry('listServiceVersions', serviceName, request);
+
+      this.logger.debug(`ListVersion response: ${JSON.stringify(response, null, 2)}.`);
+
+      return response;
+    } catch (e) {
+      throw new Error(e);
+    }
   }
 }
 

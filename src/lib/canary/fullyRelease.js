@@ -1,50 +1,35 @@
-async function fullyReleaseHelper(
+function fullyReleaseHelper(
   getAliasResponse,
   functionHelper,
   argService,
   description,
-  newCreatedVersion,
+  canaryVersion,
   aliasName,
   triggers,
   functionName,
   customDomainList,
-  logger,
 ) {
+  let plan = {
+    typeName: 'full',
+    customDomainList,
+    service: argService,
+    functionName,
+    triggers,
+    alias: aliasName,
+    description,
+    jobs: [{ weight: 1 }],
+  };
   // alias
   if (getAliasResponse == undefined) {
-    await functionHelper.createAlias(
-      argService,
-      newCreatedVersion,
-      aliasName,
-      description,
-      null,
-      1,
-    );
+    plan.isAliasExisted = false;
+    // new created version will be the baseVersion.
+    plan.baseVersion = canaryVersion;
   } else {
-    await functionHelper.updateAlias(
-      argService,
-      newCreatedVersion,
-      aliasName,
-      description,
-      null,
-      1,
-    );
+    plan.isAliasExisted = true;
+    // new created version will be the baseVersion.
+    plan.baseVersion = canaryVersion;
   }
-
-  // trigger
-  await functionHelper.updateTriggerListByAlias(triggers, functionName, aliasName, argService);
-
-  // custom domain:
-
-  await functionHelper.updateCustomDomainListByAlias(
-    argService,
-    customDomainList,
-    aliasName,
-    functionName,
-  );
-
-  logger.info(`Successfully allocated 100% traffic to canaryVersion: [${newCreatedVersion}].`);
-  logger.info(`Full release completed.`);
+  return plan;
 }
 
 module.exports = {
