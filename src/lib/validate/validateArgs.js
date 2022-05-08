@@ -206,4 +206,25 @@ async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger)
   }
 }
 
-module.exports = { validateParams, parseCanaryPolicy, validateBaseVersion, isNoVersionInProject };
+function checkNotificationPlans(args) {
+  let plans = [];
+  const argsKeys = Object.keys(args);
+  if (argsKeys.includes('notification')) {
+    const notifyObject = _.get(args, 'notification');
+    for (const object of notifyObject) {
+      if (object.dingTalkRobot != undefined) {
+        plans.push({ type: 'dingTalkRobot', config: object.dingTalkRobot });
+      }
+    }
+  }
+  return plans;
+}
+
+module.exports = {
+  validateParams,
+  parseCanaryPolicy,
+  validateBaseVersion,
+  isNoVersionInProject,
+  checkNotificationPlans,
+};
+

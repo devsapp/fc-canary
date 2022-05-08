@@ -1,11 +1,11 @@
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 class CanaryWorker {
-  constructor(logger, plan, functionHelper) {
+  constructor(logger, plan, functionHelper, notificationHelper) {
     this.logger = logger;
     this.plan = plan;
     this.functionHelper = functionHelper;
-    console.error(plan);
+    this.notificationHelper = notificationHelper;
   }
 
   async doJobs() {
@@ -63,12 +63,23 @@ class CanaryWorker {
         );
       }
       if (typeName === 'full') {
+        this.notificationHelper.notify(
+          `Successfully allocated 100% traffic to baseVersion: [${baseVersion}].`,
+        );
         this.logger.info(`Successfully allocated 100% traffic to baseVersion: [${baseVersion}].`);
         this.logger.info(`Full release completed.`);
         return;
       } else {
         // last term, no need to sleep.
         if (index === jobs.length - 1) {
+          this.notificationHelper.notify(
+            `Successfully completed last step of the ${typeName} release: allocated ${
+              100 - Math.round(job.weight * 100)
+            }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+              job.weight * 100,
+            )}% traffic to canaryVersion: [${canaryVersion}].`,
+          );
+
           this.logger.info(
             `Successfully completed last step of the ${typeName} release: allocated ${
               100 - Math.round(job.weight * 100)
@@ -78,6 +89,14 @@ class CanaryWorker {
           );
           return;
         }
+
+        this.notificationHelper.notify(
+          `Successfully completed one step of the ${typeName} release: allocated ${
+            100 - Math.round(job.weight * 100)
+          }% traffic to baseVersion: [${baseVersion}], ${Math.round(
+            job.weight * 100,
+          )}% traffic to canaryVersion: [${canaryVersion}].`,
+        );
         this.logger.info(
           `Successfully completed one step of the ${typeName} release: allocated ${
             100 - Math.round(job.weight * 100)

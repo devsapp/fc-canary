@@ -4,6 +4,7 @@ const {
   parseCanaryPolicy,
   validateBaseVersion,
   isNoVersionInProject,
+  checkNotificationPlans,
 } = require('./validate/validateArgs');
 const { FunctionHelper } = require('./fc/functionHelper');
 const { canaryWeightHelper } = require('./canary/canaryWeight');
@@ -14,6 +15,7 @@ const { canaryStepHelper } = require('./canary/canaryStep');
 const { canaryPlansHelper } = require('./canary/canaryPlans');
 const { linearStepHelper } = require('./canary/linearStep');
 const { CanaryWorker } = require('../lib/canary/canaryWorker');
+const { NotificationHelper } = require('./notification/notificationHelper');
 
 /**
  * if the yaml contains single function.
@@ -29,6 +31,8 @@ async function singleFunc(inputs, args) {
   };
 
   const functionHelper = new FunctionHelper(logger, config);
+  const notificationPlans = checkNotificationPlans(args);
+  const notificationHelper = new NotificationHelper(logger, notificationPlans);
 
   delete inputs.credentials;
   logger.debug(`Inputs params without credentials: ${JSON.stringify(inputs, null, 2)}.`);
@@ -37,6 +41,7 @@ async function singleFunc(inputs, args) {
   const functionName = inputs.props && inputs.props.function && inputs.props.function.name;
   const serviceName = inputs.props && inputs.props.service && inputs.props.service.name;
   const { triggers = [] } = inputs.props;
+
   // TODO 会不会上个post插件删除inputs.output导致我这里拿不到custom domain
   const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
 
@@ -86,7 +91,7 @@ async function singleFunc(inputs, args) {
       functionName,
       customDomainList,
     );
-    const worker = new CanaryWorker(logger, plan, functionHelper);
+    const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
     await worker.doJobs();
   } else {
     // 寻找baseVersion
@@ -111,7 +116,7 @@ async function singleFunc(inputs, args) {
         policy.value,
         customDomainList,
       );
-      const worker = new CanaryWorker(logger, plan, functionHelper);
+      const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
       await worker.doJobs();
       logger.info(`CanaryWeight release completed.`);
     }
@@ -130,7 +135,7 @@ async function singleFunc(inputs, args) {
         policy.value,
         customDomainList,
       );
-      const worker = new CanaryWorker(logger, plan, functionHelper);
+      const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
       await worker.doJobs();
       logger.info(`CanaryWeight release completed.`);
     }
@@ -150,7 +155,7 @@ async function singleFunc(inputs, args) {
         customDomainList,
       );
 
-      const worker = new CanaryWorker(logger, plan, functionHelper);
+      const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
       await worker.doJobs();
       logger.info(`CanaryPlan release completed.`);
     }
@@ -169,7 +174,7 @@ async function singleFunc(inputs, args) {
         policy.value,
         customDomainList,
       );
-      const worker = new CanaryWorker(logger, plan, functionHelper);
+      const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
       await worker.doJobs();
       logger.info(`LinearStep release completed.`);
     }
