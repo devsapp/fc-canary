@@ -5,18 +5,19 @@ const assert = require('assert');
  *
  * @param logger
  * @param params
+ * @param exceptionHelper
  * @returns {Promise<void>}
  */
-async function validateParams(logger, params) {
+async function validateParams(logger, params, exceptionHelper) {
   if (params.serviceName == undefined) {
-    throw new Error(`Missing service name in inputs.`);
+    await exceptionHelper.throwAndNotifyError(`Missing service name in inputs.`);
   }
   if (params.functionName == undefined) {
-    throw new Error(`Missing function name in inputs.`);
+    await exceptionHelper.throwAndNotifyError(`Missing function name in inputs.`);
   }
   // check user's custom_domain.
   if (params.customDomainList.constructor.name !== 'Array') {
-    throw new Error(`Failed to parse custom domains.`);
+    await exceptionHelper.throwAndNotifyError(`Failed to parse custom domains.`);
   }
 }
 
@@ -24,9 +25,10 @@ async function validateParams(logger, params) {
  * check if there is no version in the project.
  * @param functionHelper
  * @param service
+ * @param exceptionHelper
  * @returns {Promise<boolean>}
  */
-async function isNoVersionInProject (functionHelper, service) {
+async function isNoVersionInProject(functionHelper, service, exceptionHelper) {
 
   const response = await functionHelper.listVersion(service, undefined, undefined);
   if (
@@ -35,7 +37,7 @@ async function isNoVersionInProject (functionHelper, service) {
     response.body.versions == undefined ||
     typeof response.body.versions[Symbol.iterator] !== 'function'
   ) {
-    throw new Error('Listing versions error, please contact the staff.');
+    await exceptionHelper.throwAndNotifyError('Listing versions error, please contact the staff.');
   }
   return response.body.versions.length === 0;
 }
@@ -44,9 +46,8 @@ async function isNoVersionInProject (functionHelper, service) {
  * Canary policy, only one of the following parameters can be selected, if not specified then no canary policy
  * @param args
  * @param logger
- * @returns {{}}
  */
-function parseCanaryPolicy(args, logger) {
+async function parseCanaryPolicy(args, logger, exceptionHelper) {
   let response = {};
   const argsKeys = Object.keys(args);
   logger.debug(`keys in args: [${argsKeys}].`);
@@ -72,8 +73,7 @@ function parseCanaryPolicy(args, logger) {
     response.key = 'full';
     response.value = 100;
   } else if (policies.length > 1) {
-
-    throw new Error(
+    await exceptionHelper.throwAndNotifyError(
       `Only one canary policy can be selected, but [${policies.length}] canary policies are found.`,
     );
   } else {
@@ -86,29 +86,32 @@ function parseCanaryPolicy(args, logger) {
       logger.debug(`canaryPlans: [${plans}].`);
 
       if (plans == undefined) {
-        throw new Error(
-          `Format error, missing configuration of plan in canaryPlans, please check the configuration.`,
+        await exceptionHelper.throwAndNotifyError(
+          `Missing configuration of plan in canaryPlans, please check the configuration.`,
         );
       }
 
       for (const plan of _.get(args, 'canaryPlans')) {
         logger.debug(`plan: ${JSON.stringify(plan, null, 2)}.`);
-        assert(
-          plan.weight &&
-            _.isNumber(plan.weight) &&
-            Math.round(plan.weight) === plan.weight &&
-            plan.weight >= 1 &&
-            plan.weight <= 100,
-          `Weight must be set as an integer, and 1 <= weight <= 100. `,
-        );
-
-        assert(
-          plan.interval &&
-            _.isNumber(plan.interval) &&
-            Math.round(plan.interval) === plan.interval &&
-            plan.interval >= 1,
-          `Interval must be set as an integer, and 1 <= interval. `,
-        );
+        try {
+          assert(
+            plan.weight &&
+              _.isNumber(plan.weight) &&
+              Math.round(plan.weight) === plan.weight &&
+              plan.weight >= 1 &&
+              plan.weight <= 100,
+            `Weight must be set as an integer, and 1 <= weight <= 100. `,
+          );
+          assert(
+            plan.interval &&
+              _.isNumber(plan.interval) &&
+              Math.round(plan.interval) === plan.interval &&
+              plan.interval >= 1,
+            `Interval must be set as an integer, and 1 <= interval. `,
+          );
+        } catch (e) {
+          await exceptionHelper.throwAndNotifyError(e.message);
+        }
       }
       response.key = 'canaryPlans';
       response.value = _.get(args, 'canaryPlans');
@@ -118,19 +121,22 @@ function parseCanaryPolicy(args, logger) {
     if (canaryPolicyName === 'linearStep' || canaryPolicyName === 'canaryStep') {
       const canaryPolicy = _.get(args, canaryPolicyName);
       if (canaryPolicy == undefined) {
-        throw new Error(
-          `Format error, missing configuration in [${canaryPolicyName}], please check the configuration.`,
+        await exceptionHelper.throwAndNotifyError(
+          `Missing configuration in [${canaryPolicyName}], please check the configuration.`,
         );
       }
-
-      assert(
-        canaryPolicy.weight &&
-          _.isNumber(canaryPolicy.weight) &&
-          Math.round(canaryPolicy.weight) === canaryPolicy.weight &&
-          canaryPolicy.weight >= 1 &&
-          canaryPolicy.weight <= 100,
-        `Weight must be set as an integer, and 1 <= weight <= 100. `,
-      );
+      try {
+        assert(
+          canaryPolicy.weight &&
+            _.isNumber(canaryPolicy.weight) &&
+            Math.round(canaryPolicy.weight) === canaryPolicy.weight &&
+            canaryPolicy.weight >= 1 &&
+            canaryPolicy.weight <= 100,
+          `Weight must be set as an integer, and 1 <= weight <= 100. `,
+        );
+      } catch (e) {
+        await exceptionHelper.throwAndNotifyError(e.message);
+      }
 
       if (canaryPolicy.interval == undefined) {
         if (canaryPolicyName === 'linearStep') {
@@ -142,12 +148,16 @@ function parseCanaryPolicy(args, logger) {
           canaryPolicy.interval = 10;
         }
       } else {
-        assert(
-          _.isNumber(canaryPolicy.interval) &&
-            Math.round(canaryPolicy.interval) === canaryPolicy.interval &&
-            canaryPolicy.interval >= 1,
-          `Interval must be set as an integer, and 1 <= interval. `,
-        );
+        try {
+          assert(
+            _.isNumber(canaryPolicy.interval) &&
+              Math.round(canaryPolicy.interval) === canaryPolicy.interval &&
+              canaryPolicy.interval >= 1,
+            `Interval must be set as an integer, and 1 <= interval. `,
+          );
+        } catch (e) {
+          await exceptionHelper.throwAndNotifyError(e.message);
+        }
       }
       response.key = `${canaryPolicyName}`;
       response.value = canaryPolicy;
@@ -156,15 +166,18 @@ function parseCanaryPolicy(args, logger) {
     // canaryWeight
     if (canaryPolicyName === 'canaryWeight') {
       const canaryWeight = _.get(args, 'canaryWeight');
-
-      assert(
-        canaryWeight &&
-          _.isNumber(canaryWeight) &&
-          Math.round(canaryWeight) === canaryWeight &&
-          canaryWeight >= 1 &&
-          canaryWeight <= 100,
-        `Weight must be set as an integer, and 1 <= weight <= 100. `,
-      );
+      try {
+        assert(
+          canaryWeight &&
+            _.isNumber(canaryWeight) &&
+            Math.round(canaryWeight) === canaryWeight &&
+            canaryWeight >= 1 &&
+            canaryWeight <= 100,
+          `Weight must be set as an integer, and 1 <= weight <= 100. `,
+        );
+      } catch (e) {
+        await exceptionHelper.throwAndNotifyError(e.message);
+      }
 
       response.key = 'canaryWeight';
       response.value = canaryWeight;
@@ -179,20 +192,25 @@ function parseCanaryPolicy(args, logger) {
  * @param baseVersionArgs
  * @param helper
  * @param logger
+ * @param exceptionHelper
  * @returns {Promise<void>}
  */
-async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger) {
-  assert(
-    !isNaN(baseVersionArgs) &&
-      parseFloat(baseVersionArgs) === Math.round(parseFloat(baseVersionArgs)) &&
-      parseFloat(baseVersionArgs) > 0,
-    `BaseVersion must be a Integer, and 0 < baseVersion`,
-  );
+async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger, exceptionHelper) {
+  try {
+    assert(
+      !isNaN(baseVersionArgs) &&
+        parseFloat(baseVersionArgs) === Math.round(parseFloat(baseVersionArgs)) &&
+        parseFloat(baseVersionArgs) > 0,
+      `BaseVersion must be a Integer, and 0 < baseVersion`,
+    );
+  } catch (e) {
+    await exceptionHelper.throwAndNotifyError(e.message);
+  }
 
   const response = await helper.listVersion(serviceName, 1, baseVersionArgs);
 
   if (response == undefined || response.body == undefined) {
-    throw new Error(
+    await exceptionHelper.throwAndNotifyError(
       `No response found when list versions of service: [${serviceName}]. Please contact staff.`,
     );
   }
@@ -200,7 +218,7 @@ async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger)
     response.body.versions.length === 0 ||
     response.body.versions[0].versionId !== baseVersionArgs
   ) {
-    throw new Error(
+    await exceptionHelper.throwAndNotifyError(
       `BaseVersion: [${baseVersionArgs}] doesn't exists in service: [${serviceName}]. There are two solutions: 1. Do not set baseVersion. Please check README.md for information about not configuring baseVersion. 2. Set a valid baseVersion.`,
     );
   }

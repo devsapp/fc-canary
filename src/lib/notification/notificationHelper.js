@@ -56,7 +56,6 @@ class NotificationHelper {
       msgtype: 'text',
       text: { content: message },
     });
-    console.error(messageWrap);
     await this.httpsSend(messageWrap, hostname, newPath, 'dingTalkRobot');
   }
 
@@ -66,7 +65,7 @@ class NotificationHelper {
         if (plan.type === 'dingTalkRobot') {
           try {
             await this.dingTalkGroupRobot(data, plan.config);
-            this.logger.info('Successfully notified users through dingTalk robot.');
+            this.logger.debug('Successfully notified users through dingTalk robot.');
           } catch (e) {
             // no need to stop the process.
             this.logger.error(e);
@@ -90,14 +89,15 @@ class NotificationHelper {
         'Content-Length': postData.length,
       },
     };
-
-    const doHttps = new Promise(() => {
+    try {
+    const doHttps = new Promise((resolve) => {
       const req = https.request(options, (res) => {
         res.on('data', (data) => {
           if (data != undefined) {
             const dataObj = JSON.parse(data);
             if (dataObj.errcode != undefined && dataObj.errcode === 0) {
               this.logger.debug(`Successfully notified through ${notifyType}.`);
+              resolve();
             } else {
               this.logger.error(
                 `Failed to notify through ${notifyType}, error: ${JSON.stringify(
@@ -106,6 +106,7 @@ class NotificationHelper {
                   2,
                 )}`,
               );
+              resolve();
             }
           }
         });
@@ -114,11 +115,16 @@ class NotificationHelper {
         this.logger.error(
           `Failed to notify through ${notifyType}, error: ${JSON.stringify(e, null, 2)}`,
         );
+        resolve();
+        // throw e;
       });
       req.write(postData);
       req.end();
     });
     await doHttps;
+  } catch (e) {
+      this.logger.error(e);
+    }
   }
 }
 

@@ -11,9 +11,10 @@ const Client = require('@alicloud/fc-open20210406').default;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 class FunctionHelper {
-  constructor(logger, config) {
+  constructor(logger, config, exceptionHelper) {
     this.logger = logger;
     this.client = new Client(config);
+    this.exceptionHelper = exceptionHelper;
   }
 
   /**
@@ -57,7 +58,9 @@ class FunctionHelper {
       response = await this.retry('publishServiceVersion', serviceName, request);
       this.logger.debug(`Publish version response: ${JSON.stringify(response, null, 2)}.`);
     } catch (e) {
-      throw new Error(e);
+      await this.exceptionHelper.throwAndNotifyError(
+        `Error code: [${e.code}], error message: [${e.message}]`,
+      );
     }
 
     if (
@@ -65,14 +68,14 @@ class FunctionHelper {
       response.body == undefined ||
       response.body.versionId == undefined
     ) {
-      throw new Error(
+      await this.exceptionHelper.throwAndNotifyError(
         `No response found when publish new version of service: [${serviceName}]. Please contact staff.`,
       );
     }
     if (!isNaN(response.body.versionId)) {
       return response.body.versionId;
     }
-    throw new Error(
+    await this.exceptionHelper.throwAndNotifyError(
       `Failed to create a new version of service: [${serviceName}], please contact the staff.`,
     );
   }
@@ -96,7 +99,7 @@ class FunctionHelper {
       // if aliasName exists, set the version of the aliasName to baseVersion
       if (getAliasResponse !== undefined && getAliasResponse.body != undefined) {
         if (isNaN(getAliasResponse.body.versionId)) {
-          throw new Error(
+          await this.exceptionHelper.throwAndNotifyError(
             `VersionId of alias: [${aliasName}] is not a number. Please contact staff.`,
           );
         }
@@ -110,18 +113,22 @@ class FunctionHelper {
           getVersionResponse.body.versions == undefined ||
           getVersionResponse.body.versions.constructor.name != 'Array'
         ) {
-          throw new Error(
+          await this.exceptionHelper.throwAndNotifyError(
             `No response found when list versions of service: [${serviceName}]. Please contact staff.`,
           );
         }
 
         const versionIdList = getVersionResponse.body.versions;
         if (versionIdList.length === 0 || versionIdList[0].versionId !== canaryVersion) {
-          throw new Error(`New created version: [${canaryVersion}] has been deleted.`);
+          await this.exceptionHelper.throwAndNotifyError(
+            `New created version: [${canaryVersion}] has been deleted.`,
+          );
         } else if (versionIdList.length === 1) {
           // if there is only new canaryVersion, in parseCanaryPolicy method will catch it and set the policy to full release,
           // there is no way to get here.
-          throw new Error(`System error, the length of versionList of project is changed during the process.`)
+          await this.exceptionHelper.throwAndNotifyError(
+            `The length of versionList of project is changed during the process.`,
+          );
         } else {
           baseVersion = versionIdList[1].versionId;
         }
@@ -135,7 +142,9 @@ class FunctionHelper {
   async createAlias(serviceName, baseVersion, aliasName, description, canaryVersion, weight) {
     this.logger.debug(`Begin to create a new Alias: [${aliasName}].`);
     if (baseVersion == undefined) {
-      throw new Error('BaseVersion must be set when creating a new alias.');
+      await this.exceptionHelper.throwAndNotifyError(
+        'BaseVersion must be set when creating a new alias.',
+      );
     }
     let request;
 
@@ -160,16 +169,18 @@ class FunctionHelper {
       createAliasResponse = await this.retry('createAlias', serviceName, request);
       this.logger.debug(`Create alias response: ${JSON.stringify(createAliasResponse, null, 2)}.`);
     } catch (e) {
-      throw e;
+      await this.exceptionHelper.throwAndNotifyError(
+        `Error code: [${e.code}], error message: [${e.message}]`,
+      );
     }
 
     if (createAliasResponse == undefined || createAliasResponse.body == undefined) {
-      throw new Error(
+      await this.exceptionHelper.throwAndNotifyError(
         `No response found when creating a new alias: [${aliasName}]. Please contact staff.`,
       );
     }
     if (createAliasResponse.body.aliasName !== aliasName) {
-      throw new Error(
+      await this.exceptionHelper.throwAndNotifyError(
         `Failed to create an alias, expect: [${aliasName}], return: [${createAliasResponse.body.aliasName}].`,
       );
     }
@@ -205,15 +216,17 @@ class FunctionHelper {
       updateAliasResponse = await this.retry('updateAlias', serviceName, aliasName, request);
       this.logger.debug(`Update alias response: ${JSON.stringify(updateAliasResponse, null, 2)}.`);
     } catch (e) {
-      throw e;
+      await this.exceptionHelper.throwAndNotifyError(
+        `Error code: [${e.code}], error message: [${e.message}]`,
+      );
     }
     if (updateAliasResponse == undefined || updateAliasResponse.body == undefined) {
-      throw new Error(
+      await this.exceptionHelper.throwAndNotifyError(
         `No response found when updating an alias: [${aliasName}]. Please contact the staff.`,
       );
     }
     if (updateAliasResponse.body.aliasName !== aliasName) {
-      throw new Error(
+      await this.exceptionHelper.throwAndNotifyError(
         `Failed to update an alias, expect: [${aliasName}], return: [${updateAliasResponse.body.aliasName}].`,
       );
     }
@@ -234,7 +247,7 @@ class FunctionHelper {
         getAliasResponse.body == undefined ||
         getAliasResponse.body.versionId == undefined
       ) {
-        throw new Error(
+        await this.exceptionHelper.throwAndNotifyError(
           `No response found when checking alias: [${aliasName}]. Please contact staff.`,
         );
       }
@@ -243,7 +256,9 @@ class FunctionHelper {
       if (e.message.indexOf('AliasNotFound') !== -1) {
         // do nothing
       } else {
-        throw e;
+        await this.exceptionHelper.throwAndNotifyError(
+          `Error code: [${e.code}], error message: [${e.message}]`,
+        );
       }
     }
     return getAliasResponse;
@@ -265,14 +280,18 @@ class FunctionHelper {
         response = await this.retry('updateTrigger', serviceName, functionName, item.name, request);
         this.logger.debug(`Update trigger response: ${JSON.stringify(response, null, 2)}.`);
       } catch (e) {
-        throw e;
+        await this.exceptionHelper.throwAndNotifyError(
+          `Error code: [${e.code}], error message: [${e.message}]`,
+        );
       }
       if (
         response == undefined ||
         response.body == undefined ||
         response.body.qualifier !== aliasName
       ) {
-        throw new Error(`Failed to update trigger: [${item.triggerName}]. Please contact staff.`);
+        await this.exceptionHelper.throwAndNotifyError(
+          `Failed to update trigger: [${item.triggerName}]. Please contact staff.`,
+        );
       }
     }
     this.logger.info(`Successfully updated triggers by setting alias: [${aliasName}].`);
@@ -298,7 +317,7 @@ class FunctionHelper {
     this.logger.debug('Begin to update custom domains.');
     for (const item of customDomainList) {
       if (item.domain == undefined) {
-        throw new Error(
+        await this.exceptionHelper.throwAndNotifyError(
           `Custom domain name is undefined. Please check the custom domain configuration`,
         );
       }
@@ -310,11 +329,9 @@ class FunctionHelper {
       try {
         response = await this.retry('getCustomDomain', domainName);
       } catch (e) {
-        if (e.message.includes('DomainNameNotFound')) {
-          throw new Error(`Failed to check custom domain: [${domainName}], domain not found.`);
-        } else {
-          throw e;
-        }
+        await this.exceptionHelper.throwAndNotifyError(
+          `Error code: [${e.code}], error message: [${e.message}]`,
+        );
       }
       this.logger.debug(`Get custom domain response: ${JSON.stringify(response, null, 2)}.`);
 
@@ -323,14 +340,14 @@ class FunctionHelper {
         response.body == undefined ||
         response.body.routeConfig == undefined
       ) {
-        throw new Error(
+        await this.exceptionHelper.throwAndNotifyError(
           `No response found when checking customDomain: [${domainName}]. Please contact staff.`,
         );
       }
       const routes = response.body.routeConfig.routes;
 
       if (!(Symbol.iterator in routes)) {
-        throw new Error(
+        await this.exceptionHelper.throwAndNotifyError(
           `Failed to check custom domain, routes are not iterable: [${domainName}]. Please contact staff.`,
         );
       }
@@ -358,7 +375,9 @@ class FunctionHelper {
           `Update custom domain response: ${JSON.stringify(updateCustomDomainResponse, null, 2)}.`,
         );
       } catch (e) {
-        throw e;
+        await this.exceptionHelper.throwAndNotifyError(
+          `Error code: [${e.code}], error message: [${e.message}]`,
+        );
       }
 
       if (
@@ -367,7 +386,7 @@ class FunctionHelper {
         updateCustomDomainResponse.body.routeConfig == undefined ||
         updateCustomDomainResponse.body.routeConfig.routes == undefined
       ) {
-        throw new Error(
+        await this.exceptionHelper.throwAndNotifyError(
           `No response found when update custom domain: [${domainName}]. Please contact staff.`,
         );
       }
@@ -377,8 +396,8 @@ class FunctionHelper {
         _.isEmpty(routesResponse) !== _.isEmpty(routes) &&
         routes.length !== routesResponse.length
       ) {
-        throw new Error(
-          `Failed to update custom domain, the number of routes before and after the update is different`,
+        await this.exceptionHelper.throwAndNotifyError(
+          `Failed to update custom domain, the number of routes before and after the update is different.`,
         );
       }
       for (const route of routesResponse) {
@@ -387,8 +406,8 @@ class FunctionHelper {
           route.functionName === functionName &&
           route.qualifier !== aliasName
         ) {
-          throw new Error(
-            `Failed to update custom domain, the qualifiers of routes were not updated`,
+          await this.exceptionHelper.throwAndNotifyError(
+            `Failed to update custom domain, the qualifiers of routes were not updated.`,
           );
         }
       }
@@ -409,7 +428,9 @@ class FunctionHelper {
 
       return response;
     } catch (e) {
-      throw new Error(e);
+      await this.exceptionHelper.throwAndNotifyError(
+        `Error code: [${e.code}], error message: [${e.message}]`,
+      );
     }
   }
 }

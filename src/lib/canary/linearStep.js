@@ -14,8 +14,6 @@ function linearStepHelper(
   const canaryWeight = strategy.weight / 100;
   const interval = strategy.interval;
 
-
-
   let plan = {
     typeName: 'linearStep',
     customDomainList,

@@ -1,27 +1,27 @@
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 class CanaryWorker {
-  constructor(logger, plan, functionHelper, notificationHelper) {
+  constructor(logger, plans, functionHelper, notificationHelper) {
     this.logger = logger;
-    this.plan = plan;
+    this.plans = plans;
     this.functionHelper = functionHelper;
     this.notificationHelper = notificationHelper;
   }
 
   async doJobs() {
     const {
-      typeName,
+      typeName, // 'full', 'canaryStep', 'canaryPlans'...
       customDomainList,
       service,
       functionName,
       triggers,
-      jobs,
+      jobs, // jobs should be finished.
       alias,
-      isAliasExisted,
+      isAliasExisted, // if alias exists, update alias, on the contrary, create a new alias
       baseVersion,
       canaryVersion,
       description,
-    } = this.plan;
+    } = this.plans;
 
     for (const [index, job] of jobs.entries()) {
       if (index === 0) {
@@ -64,7 +64,7 @@ class CanaryWorker {
       }
       if (typeName === 'full') {
         this.notificationHelper.notify(
-          `Successfully allocated 100% traffic to baseVersion: [${baseVersion}].`,
+          `Successfully allocated 100% traffic to baseVersion: [${baseVersion}], service: [${service}], alias: [${alias}].`,
         );
         this.logger.info(`Successfully allocated 100% traffic to baseVersion: [${baseVersion}].`);
         this.logger.info(`Full release completed.`);
@@ -77,7 +77,7 @@ class CanaryWorker {
               100 - Math.round(job.weight * 100)
             }% traffic to baseVersion: [${baseVersion}], ${Math.round(
               job.weight * 100,
-            )}% traffic to canaryVersion: [${canaryVersion}].`,
+            )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}].`,
           );
 
           this.logger.info(
@@ -95,7 +95,7 @@ class CanaryWorker {
             100 - Math.round(job.weight * 100)
           }% traffic to baseVersion: [${baseVersion}], ${Math.round(
             job.weight * 100,
-          )}% traffic to canaryVersion: [${canaryVersion}].`,
+          )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}].`,
         );
         this.logger.info(
           `Successfully completed one step of the ${typeName} release: allocated ${

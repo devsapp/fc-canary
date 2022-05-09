@@ -35,34 +35,6 @@ function canaryStepHelper(
   // alias
   plan.isAliasExisted = getAliasResponse != undefined;
   return plan;
-
-
-
-
-
-  // if (canaryWeight === 1) {
-  //   logger.info(`Already allocated 100% traffic to canaryVersion: [${canaryVersion}], stop.`);
-  //   logger.info(`CanaryStep release completed.`);
-  //   return;
-  // }
-
-  // const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-  //
-  // await sleep(60000 * interval);
-  //
-  // await functionHelper.updateAlias(
-  //   argService,
-  //   baseVersion,
-  //   aliasName,
-  //   description,
-  //   canaryVersion,
-  //   1,
-  // );
-
-  // logger.info(
-  //   `Successfully completed the second step of the canaryStep release: allocated 100% traffic to canaryVersion: [${canaryVersion}].`,
-  // );
-  // logger.info(`CanaryStep release completed.`);
 }
 
 module.exports = {

@@ -16,7 +16,7 @@ const { canaryPlansHelper } = require('./canary/canaryPlans');
 const { linearStepHelper } = require('./canary/linearStep');
 const { CanaryWorker } = require('../lib/canary/canaryWorker');
 const { NotificationHelper } = require('./notification/notificationHelper');
-
+const { ExceptionHelper } = require('./exeception/exceptionHelper');
 /**
  * if the yaml contains single function.
  * @returns {Promise<void>}
@@ -29,10 +29,11 @@ async function singleFunc(inputs, args) {
     securityToken: inputs.credentials && inputs.credentials.SecurityToken,
     regionId: inputs.props && inputs.props.region,
   };
-
-  const functionHelper = new FunctionHelper(logger, config);
   const notificationPlans = checkNotificationPlans(args);
   const notificationHelper = new NotificationHelper(logger, notificationPlans);
+  const exceptionHelper = new ExceptionHelper(notificationHelper);
+
+  const functionHelper = new FunctionHelper(logger, config, exceptionHelper);
 
   delete inputs.credentials;
   logger.debug(`Inputs params without credentials: ${JSON.stringify(inputs, null, 2)}.`);
@@ -49,20 +50,32 @@ async function singleFunc(inputs, args) {
 
   const params = { functionName, serviceName, customDomainList };
 
-  await validateParams(logger, params);
+  await validateParams(logger, params, exceptionHelper);
 
-  let policy = parseCanaryPolicy(args, logger);
-  if (policy.key !== 'full' && (await isNoVersionInProject(functionHelper, serviceName))) {
+  let policy = await parseCanaryPolicy(args, logger, exceptionHelper);
+  if (
+    policy.key !== 'full' &&
+    (await isNoVersionInProject(functionHelper, serviceName, exceptionHelper))
+  ) {
+    logger.warn(
+      `Although the canary policy is configured, there is no version in the service [${serviceName}] and the system will do a full release.`,
+    );
     policy.key = 'full';
     policy.value = 100;
   }
-  logger.info(`Canary Policy: [${policy.key}] release.`);
+  logger.info(`Canary Policy: ${policy.key} release.`);
 
   let baseVersionArgs;
   if (baseVersion !== undefined && policy.key !== 'full') {
     // if baseVersion is set, we convert it to a string.
     baseVersionArgs = baseVersion.toString();
-    await validateBaseVersion(serviceName, baseVersionArgs, functionHelper, logger);
+    await validateBaseVersion(
+      serviceName,
+      baseVersionArgs,
+      functionHelper,
+      logger,
+      exceptionHelper,
+    );
   }
 
   logger.info('Successfully checked args, inputs and canary policy.');

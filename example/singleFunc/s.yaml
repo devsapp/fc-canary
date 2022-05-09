@@ -11,15 +11,21 @@ services:
         - plugin: ${path(../..)}
           args:
             notification:
-              dingding: https://oapi.dingtalk.com/robot/send?access_token=a14a4e93ebd5eb5c82de8817481e44dcfae5a484b17efbf05d3d7238e05de0bb
-            alias: test6
-#            baseVersion: 5
-#            description: '1231xx23'
-#            service: xxx
+              - dingTalkRobot:
+                  accessToken: a14a4e93ebd5eb5c82de8817481e44dcfae5a484b17efbf05d3d7238e05de0b
+                  secret: SEC076e302e71715c3490c36f36b4c22be2d635aed853de56edef68b234059c72f3
+                  atUserIds:
+                    - 368964
+#                  atMobiles:
+#                    - 17610176301
+#                  isAtAll: false
+#            alias: test3
+#            baseVersion: 13
+            description: '1231xx23'
 #            canaryStep:
 #              weight: 40
 #              interval: 1
-#            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
+            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
 #            canaryPlans: #自定义灰度
 #              - weight: 1
 #                interval: 1
@@ -27,13 +33,13 @@ services:
 #                interval: 1
 #              - weight: 40
 #                interval: 1
-            linearStep:
-              weight: 40
-              interval: 1
+#            linearStep:
+#              weight: 40
+#              interval: 1
     props:
-      region: cn-hangzhou
+      region: cn-beijing
       service:
-        name: preProd1
+        name: prodTest
         logConfig: auto
         nasConfig: auto
       function:
@@ -56,11 +62,11 @@ services:
           protocol: HTTP
           routeConfigs:
             - path: '/*'
-        - domainName: wordpress.web-framework.1816647648916833.cn-hangzhou.fc.devsapp.net
+        - domainName: vuepress.website.1816647648916833.cn-beijing.fc.devsapp.net
           protocol: HTTP
           routeConfigs:
             - path: '/index'
-              serviceName: preProd1
+              serviceName: prodTest
               functionName: dummy-function
             - path: '/cat'
               serviceName: test-fully
