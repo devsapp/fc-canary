@@ -12,7 +12,7 @@ services:
           args:
             notification:
               - dingTalkRobot:
-                  accessToken: a14a4e93ebd5eb5c82de8817481e44dcfae5a484b17efbf05d3d7238e05de0b
+                  accessToken: a14a4e93ebd5eb5c82de8817481e44dcfae5a484b17efbf05d3d7238e05de0bb
                   secret: SEC076e302e71715c3490c36f36b4c22be2d635aed853de56edef68b234059c72f3
                   atUserIds:
                     - 368964
