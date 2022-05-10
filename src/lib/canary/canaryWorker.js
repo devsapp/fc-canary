@@ -63,7 +63,7 @@ class CanaryWorker {
         );
       }
       if (typeName === 'full') {
-        this.notificationHelper.notify(
+       await this.notificationHelper.notify(
           `Successfully completed the release: allocated 100% traffic to baseVersion: [${baseVersion}], service: [${service}], alias: [${alias}], canary policy: full release.`,
         );
         this.logger.info(
@@ -74,7 +74,7 @@ class CanaryWorker {
       } else {
         // last term, no need to sleep.
         if (index === jobs.length - 1) {
-          this.notificationHelper.notify(
+         await this.notificationHelper.notify(
             `Successfully completed the last step of the release: allocated ${
               100 - Math.round(job.weight * 100)
             }% traffic to baseVersion: [${baseVersion}], ${Math.round(
@@ -92,7 +92,7 @@ class CanaryWorker {
           return;
         }
 
-        this.notificationHelper.notify(
+       await this.notificationHelper.notify(
           `Successfully completed one step of the release: allocated ${
             100 - Math.round(job.weight * 100)
           }% traffic to baseVersion: [${baseVersion}], ${Math.round(

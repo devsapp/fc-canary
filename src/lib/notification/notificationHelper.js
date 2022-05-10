@@ -16,11 +16,11 @@ class NotificationHelper {
     const path = '/robot/send';
 
     if (accessToken == undefined) {
-      this.logger.error('No accessToken found in dingTalk configuration');
+      this.logger.warn('No accessToken found in dingTalk configuration');
       return;
     }
     if (secret == undefined) {
-      this.logger.error('No secret found in dingTalk configuration');
+      this.logger.warn('No secret found in dingTalk configuration');
       return;
     }
 
@@ -28,15 +28,15 @@ class NotificationHelper {
     let atMobiles = (config && config.atMobiles) || [];
     let isAtAll = (config && config.isAtAll) || false;
     if (atUserIds.constructor.name !== 'Array') {
-      this.logger.error('atUserIds is not an array');
+      this.logger.warn('atUserIds is not an array');
       atUserIds = [];
     }
     if (atMobiles.constructor.name !== 'Array') {
-      this.logger.error('atMobiles is not an array');
+      this.logger.warn('atMobiles is not an array');
       atMobiles = [];
     }
     if (isAtAll.constructor.name !== 'Boolean') {
-      this.logger.error('isAtAll is not Boolean');
+      this.logger.warn('isAtAll is not Boolean');
       isAtAll = false;
     }
 
@@ -46,7 +46,6 @@ class NotificationHelper {
 
     const hash = crypto.createHmac('sha256', secret).update(sign, 'utf8').digest('base64');
     const newPath = path + `?access_token=${accessToken}&timestamp=${timeStamp}&sign=${hash}`;
-
     const messageWrap = JSON.stringify({
       at: {
         atMobiles: atMobiles,
@@ -60,18 +59,18 @@ class NotificationHelper {
   }
 
   async notify(data) {
-    if (this.plans && typeof this.plans[Symbol.iterator] === 'function') {
-      for (const plan of this.plans) {
-        if (plan.type === 'dingTalkRobot') {
-          try {
+    try {
+      if (this.plans && typeof this.plans[Symbol.iterator] === 'function') {
+        for (const plan of this.plans) {
+          if (plan.type === 'dingTalkRobot') {
             await this.dingTalkGroupRobot(data, plan.config);
             this.logger.debug('Successfully notified users through dingTalk robot.');
-          } catch (e) {
-            // no need to stop the process.
-            this.logger.error(e);
           }
         }
       }
+    } catch (e) {
+      // notification shouldn't stop the main release process.
+      this.logger.warn(e);
     }
   }
 
