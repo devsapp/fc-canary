@@ -6,7 +6,7 @@
   - [灰度策略](#灰度策略)
 - [操作案例](#操作案例)
   - [单函数发布](#单函数发布)
-  - [多函数发布](#多函数发布)
+  - [多函数发布](#多函数发布) （即将发布）
 
 ## 快速开始
 在部署钩子 post-deploy 中声明该插件，实现函数部署后的灰度发布。插件本质上是操作 Service 的版本以及别名，并且更新涉及别名的Trigger、Custom Domain
@@ -29,8 +29,8 @@ actions:
         #   - weight: 30
         #     intervalMinutes: 10
         # linearStep:
-        # weight: 20
-        # interval: 1
+        #   weight: 20
+        #   interval: 1
 ```
 
 ### 基本参数
@@ -75,7 +75,7 @@ actions:
 
 ### 钉钉群组机器人提醒 (可选功能)
 FC-canary插件可以通过钉钉群组机器人向群组内发送当前的发布状态。
-* [配置钉钉群组自定义机器人](https://open.dingtalk.com/document/robots/custom-robot-access)
+* 配置钉钉群组自定义机器人，详见[链接](https://open.dingtalk.com/document/robots/custom-robot-access)
   * 机器人选择 **加签** 的安全设置，获取secret。
   * 配置完成机器人后，从机器人的Webhook中获取access_token。
 * 在yaml中配置钉钉群组机器人。
@@ -83,8 +83,8 @@ FC-canary插件可以通过钉钉群组机器人向群组内发送当前的发�
   args:
     notification:
       - dingTalkRobot:
-        accessToken: xxx
-        secret: xxx
+        accessToken: 获取到的access_token
+        secret: 获取到的secret
         atUserIds:
           - xxx
           - xxx
@@ -186,102 +186,4 @@ services:
 
 
 ### 多函数发布
-```yaml
-edition: 1.0.0
-name: demo-app
-access: 'default'
-
-vars:
-  region: cn-hangzhou
-  service: 
-    name: demo-service
-    logConfig: auto
-    nasConfig: auto
-
-actions: # 全局 action
-  post-deploy: # 在deploy之后运行
-    - plugin: fc-canary
-      args:
-        alias: stable
-        describtion: 'test canary'
-        baseVersion: 1 # 指定基线版本
-        canaryPlans: # 自定义灰度
-          - weight: 10
-            intervalMinutes: 5
-          - weight: 30
-            intervalMinutes: 10
-
-services:
-  function-1:
-    component: devsapp/fc
-    props:
-      region: ${vars.region}
-      service: ${vars.service}
-      function:
-        handler: index.handler
-        instanceType: e1
-        memorySize: 1024
-        runtime: nodejs12
-        timeout: 60
-        name: demo-function-1
-        codeUri: .
-      triggers:
-        - name: httpTrigger
-          type: http
-          config:
-            authType: anonymous
-            methods:
-              - GET
-      customDomains:
-        - domainName: auto
-          protocol: HTTP
-          routeConfigs:
-            - path: '/*'
-
-
-  function-2:
-    component: devsapp/fc
-    props:
-      region: ${vars.region}
-      service: ${vars.service}
-      function:
-        handler: index.handler
-        instanceType: e1
-        memorySize: 1024
-        runtime: nodejs12
-        timeout: 60
-        name: demo-function-2
-        codeUri: .
-      triggers:
-        - name: httpTrigger
-          type: http
-          config:
-            authType: anonymous
-            methods:
-              - GET
-      customDomains:
-        - domainName: auto
-          protocol: HTTP
-          routeConfigs:
-            - path: '/*'
-
-```
-上述例子的执行过程是：
-* 部署函数1
-   1. 部署 Service
-   2. 部署 Function
-   3. 部署 Trigger（使用LATEST）
-   4. 部署 CustomDomain（使用LATEST）
-* 部署函数2
-   1. 部署 Service
-   2. 部署 Function
-   3. 部署 Trigger（使用LATEST）
-   4. 部署 CustomDomain（使用LATEST）
-* 执行插件
-   1. 发布版本，记录新版本 new 及当前线上版本 base
-   2. 创建别名，更新所有函数的 Trigger、Custom Domain，指向别名
-   3. 更新别名，为版本 new 分配 10% 流量，版本 base 分配 90% 流量
-   4. 等待 5 分钟
-   5. 更新别名，为版本 new 分配 30% 流量，版本 base 分配 60% 流量
-   6. 等待 10 分钟
-   7. 更新别名，为版本 new 分配 100% 流量
+依赖全局action的能力改造，敬请期待！
