@@ -17,18 +17,6 @@ actions:
   post-deploy: # 在deploy之后运行
     - plugin: fc-canary
       args:
-        notification:
-        - dingTalkRobot:
-          accessToken: xxx
-          secret: xxx
-          atUserIds:
-            - xxx
-            - xxx
-          atMobiles:
-            - xxx
-            - xxx
-          isAtAll: false
-          alias: stable
         description: 'test canary'
         baseVersion: 1 #基线版本，如果指定则使用该版本做为主版本和灰度版本进行切换
         canaryStep: # 灰度20%流量，10分钟后灰度剩余80%流量
@@ -85,7 +73,7 @@ actions:
 ### 工作流程
 ![alt](https://img.alicdn.com/imgextra/i2/O1CN01ivqpnL1fiMrIzbGD1_!!6000000004040-2-tps-1122-483.png)
 
-### 钉钉群组机器人提醒
+### 钉钉群组机器人提醒 (可选功能)
 FC-canary插件可以通过钉钉群组机器人向群组内发送当前的发布状态。
 * [配置钉钉群组自定义机器人](https://open.dingtalk.com/document/robots/custom-robot-access)
   * 机器人选择 **加签** 的安全设置，获取secret。
