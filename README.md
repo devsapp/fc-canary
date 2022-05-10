@@ -17,7 +17,18 @@ actions:
   post-deploy: # 在deploy之后运行
     - plugin: fc-canary
       args:
-        alias: stable
+        notification:
+        - dingTalkRobot:
+          accessToken: xxx
+          secret: xxx
+          atUserIds:
+            - xxx
+            - xxx
+          atMobiles:
+            - xxx
+            - xxx
+          isAtAll: false
+          alias: stable
         description: 'test canary'
         baseVersion: 1 #基线版本，如果指定则使用该版本做为主版本和灰度版本进行切换
         canaryStep: # 灰度20%流量，10分钟后灰度剩余80%流量
@@ -74,6 +85,37 @@ actions:
 ### 工作流程
 ![alt](https://img.alicdn.com/imgextra/i2/O1CN01ivqpnL1fiMrIzbGD1_!!6000000004040-2-tps-1122-483.png)
 
+### 钉钉群组机器人提醒
+FC-canary插件可以通过钉钉群组机器人向群组内发送当前的发布状态。
+* [配置钉钉群组自定义机器人](https://open.dingtalk.com/document/robots/custom-robot-access)
+  * 机器人选择 **加签** 的安全设置，获取secret。
+  * 配置完成机器人后，从机器人的Webhook中获取access_token。
+* 在yaml中配置钉钉群组机器人。
+  ```yaml
+  args:
+    notification:
+      - dingTalkRobot:
+        accessToken: xxx
+        secret: xxx
+        atUserIds:
+          - xxx
+          - xxx
+        atMobiles:
+          - xxx
+          - xxx
+        isAtAll: false  
+  ```
+  * 钉钉群组机器人基本参数
+
+| 参数名称      | 参数含义                                           | 必填    | 默认值   | 例子          |
+|--------------------------------------------------|------------------------------------------------|-------|-------|-------------|
+| accessToken | 钉钉群组机器人访问token，类型为string                       | true  | 必填    |             |
+| secret | 钉钉机器人加签秘钥，类型为string                            | true  | 必填    |             |
+| atUserIds | 被at人员的userid，类型为数组                             | false | null  | 368XXX      |   
+| atMobiles | 被at人员的手机号，类型为数组，**只有群内人员的手机号才有效，非群内成员手机号会被脱敏** | false | null  | 176xxxxxxxx |
+| isAtAll   | at所有人，类型为boolean                               | false | false | true        |
+
+
 ## 操作案例
 ### 单函数发布
 ```yaml
@@ -95,6 +137,17 @@ services:
       post-deploy: # 在deploy之后运行
         - plugin: fc-canary
           args:
+            notification:
+              - dingTalkRobot:
+                accessToken: xxx
+                secret: xxx
+                atUserIds:
+                  - xxx
+                  - xxx
+                atMobiles:
+                  - xxx
+                  - xxx
+                isAtAll: false
             alias: stable
             linearStep:
               weight: 10

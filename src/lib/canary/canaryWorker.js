@@ -64,45 +64,47 @@ class CanaryWorker {
       }
       if (typeName === 'full') {
         this.notificationHelper.notify(
-          `Successfully allocated 100% traffic to baseVersion: [${baseVersion}], service: [${service}], alias: [${alias}].`,
+          `Successfully completed the release: allocated 100% traffic to baseVersion: [${baseVersion}], service: [${service}], alias: [${alias}], canary policy: full release.`,
         );
-        this.logger.info(`Successfully allocated 100% traffic to baseVersion: [${baseVersion}].`);
+        this.logger.info(
+          `Successfully completed the release: allocated 100% traffic to baseVersion: [${baseVersion}], service: [${service}], alias: [${alias}], canary policy: full release.`,
+        );
         this.logger.info(`Full release completed.`);
         return;
       } else {
         // last term, no need to sleep.
         if (index === jobs.length - 1) {
           this.notificationHelper.notify(
-            `Successfully completed last step of the ${typeName} release: allocated ${
+            `Successfully completed the last step of the release: allocated ${
               100 - Math.round(job.weight * 100)
             }% traffic to baseVersion: [${baseVersion}], ${Math.round(
               job.weight * 100,
-            )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}].`,
+            )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}], canary policy:  ${typeName} release.`,
           );
 
           this.logger.info(
-            `Successfully completed last step of the ${typeName} release: allocated ${
+            `Successfully completed the last step of the release: allocated ${
               100 - Math.round(job.weight * 100)
             }% traffic to baseVersion: [${baseVersion}], ${Math.round(
               job.weight * 100,
-            )}% traffic to canaryVersion: [${canaryVersion}].`,
+            )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}], canary policy:  ${typeName} release.`,
           );
           return;
         }
 
         this.notificationHelper.notify(
-          `Successfully completed one step of the ${typeName} release: allocated ${
+          `Successfully completed one step of the release: allocated ${
             100 - Math.round(job.weight * 100)
           }% traffic to baseVersion: [${baseVersion}], ${Math.round(
             job.weight * 100,
-          )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}].`,
+          )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}], canary policy: ${typeName} release.`,
         );
         this.logger.info(
-          `Successfully completed one step of the ${typeName} release: allocated ${
+          `Successfully completed one step of the release: allocated ${
             100 - Math.round(job.weight * 100)
           }% traffic to baseVersion: [${baseVersion}], ${Math.round(
             job.weight * 100,
-          )}% traffic to canaryVersion: [${canaryVersion}].`,
+          )}% traffic to canaryVersion: [${canaryVersion}], service: [${service}], alias: [${alias}], canary policy: ${typeName} release.`,
         );
         await sleep(Math.round(job.interval * 60000));
       }
