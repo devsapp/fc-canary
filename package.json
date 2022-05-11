@@ -1,0 +1,14 @@
+{
+  "name": "fc-canary",
+  "version": "1.0.0",
+  "dependencies": {
+    "@alicloud/fc-open20210406": "^1.0.10",
+    "@serverless-devs/core": "^0.1.34",
+    "lodash": "^4.17.21"
+  },
+  "license": "MIT",
+  "main": "./src/index.js",
+  "devDependencies": {
+    "prettier": "2.6.2"
+  }
+}
