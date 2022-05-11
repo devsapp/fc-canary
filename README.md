@@ -182,8 +182,6 @@ services:
    5. 更新别名，为版本 new 分配 100% 流量
    
 ![alt](https://img.alicdn.com/imgextra/i1/O1CN01exh14j1Wsb9zOcAIU_!!6000000002844-2-tps-2248-508.png)
-#### 演示：
-![canaryPlan](https://img.alicdn.com/imgextra/i4/O1CN01UGr90L240jWIAbOMq_!!6000000007329-1-tps-1777-982.gif)
 
 ### 多函数发布
 依赖全局action的能力改造，敬请期待！
