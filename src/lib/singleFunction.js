@@ -150,7 +150,7 @@ async function singleFunc(inputs, args) {
       );
       const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
       await worker.doJobs();
-      logger.info(`CanaryWeight release completed.`);
+      logger.info(`CanaryStep release completed.`);
     }
 
     if (policy.key === 'canaryPlans') {
@@ -170,7 +170,7 @@ async function singleFunc(inputs, args) {
 
       const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
       await worker.doJobs();
-      logger.info(`CanaryPlan release completed.`);
+      logger.info(`CanaryPlans release completed.`);
     }
 
     if (policy.key == 'linearStep') {
