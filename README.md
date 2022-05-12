@@ -137,9 +137,7 @@ services:
                   - xxx
                 isAtAll: false
             alias: stable
-            canaryStep:
-              weight: 10
-              interval: 1
+            canaryWeight: 30
     props: 
       region: cn-hangzhou
       service:
@@ -177,11 +175,11 @@ services:
 * 执行插件
    1. 发布版本，记录新版本 new 及当前线上版本 base
    2. 创建别名，更新Trigger、Custom Domain，指向别名
-   3. 更新别名，为版本 new 分配 10% 流量，版本 base 分配 90% 流量
-   4. 等待1分钟
-   5. 更新别名，为版本 new 分配 100% 流量
-   
+   3. 更新别名，为版本 new 分配 30% 流量，版本 base 分配 70% 流量
+  
 ![alt](https://img.alicdn.com/imgextra/i1/O1CN01exh14j1Wsb9zOcAIU_!!6000000002844-2-tps-2248-508.png)
+#### 演示:
+![canaryWeight](https://img.alicdn.com/imgextra/i3/O1CN01v1WDII29tlBa6cGT8_!!6000000008126-1-tps-1777-982.gif)
 
 ### 多函数发布
 依赖全局action的能力改造，敬请期待！
