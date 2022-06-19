@@ -5,7 +5,7 @@ const {
   PublishServiceVersionRequest,
   ListServiceVersionsRequest,
   UpdateTriggerRequest,
-  UpdateCustomDomainRequest,
+  UpdateCustomDomainRequest, GetFunctionRequest,
 } = require('@alicloud/fc-open20210406');
 const Client = require('@alicloud/fc-open20210406').default;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -431,6 +431,34 @@ class FunctionHelper {
       await this.exceptionHelper.throwAndNotifyError(
         `Error code: [${e.code}], error message: [${e.message}]`,
       );
+    }
+  }
+
+  async isFunctionExistedInBaseVersion(functionName, baseVersion, serviceName) {
+    const request = new GetFunctionRequest({qualifier: baseVersion});
+    try {
+      this.logger.debug(`Begin to check the function [${functionName}] whether it is in service: [${serviceName}] of version [${baseVersion}].`);
+      const response = await this.retry('getFunction', serviceName, functionName, request);
+      this.logger.debug(`Check function response: ${JSON.stringify(response, null, 2)}.`);
+      if ( response == undefined ||
+        response.body == undefined ||
+        response.body.functionName == undefined ) {
+        await this.exceptionHelper.throwAndNotifyError(
+          `Failed to check whether function [${functionName}] is in service [${serviceName}] of baseVersion [${baseVersion}]: response received from sdk is none. `,
+        );
+      }
+      if (response.body.functionName == functionName) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (e.message.indexOf('FunctionNotFound') !== -1) {
+        return false;
+      } else {
+        await this.exceptionHelper.throwAndNotifyError(
+          `Error code: [${e.code}], error message: [${e.message}]`,
+        );
+      }
     }
   }
 }

@@ -75,6 +75,7 @@ async function singleFunc(inputs, args) {
       functionHelper,
       logger,
       exceptionHelper,
+      functionName,
     );
   }
 
@@ -115,6 +116,28 @@ async function singleFunc(inputs, args) {
       canaryVersion,
       getAliasResponse,
     );
+    // if function is not in specific version of service, it should have a full release
+    if (
+      !(await functionHelper.isFunctionExistedInBaseVersion(functionName, baseVersion, serviceName))
+    ) {
+      // start full release
+      logger.warn(`Function: [${functionName}] doesn't exist in service: [${serviceName}] of base version [${baseVersion}], there will be a full release.`)
+      const plan = fullyReleaseHelper(
+        getAliasResponse,
+        functionHelper,
+        serviceName,
+        description,
+        canaryVersion,
+        aliasName,
+        triggers,
+        functionName,
+        customDomainList,
+      );
+      const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
+      await worker.doJobs();
+      return;
+    }
+
     if (policy.key === 'canaryWeight') {
       const plan = canaryWeightHelper(
         getAliasResponse,

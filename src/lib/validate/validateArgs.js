@@ -195,7 +195,14 @@ async function parseCanaryPolicy(args, logger, exceptionHelper) {
  * @param exceptionHelper
  * @returns {Promise<void>}
  */
-async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger, exceptionHelper) {
+async function validateBaseVersion(
+  serviceName,
+  baseVersionArgs,
+  helper,
+  logger,
+  exceptionHelper,
+  functionName,
+) {
   try {
     assert(
       !isNaN(baseVersionArgs) &&
@@ -220,6 +227,13 @@ async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger,
   ) {
     await exceptionHelper.throwAndNotifyError(
       `BaseVersion: [${baseVersionArgs}] doesn't exists in service: [${serviceName}]. There are two solutions: 1. Do not set baseVersion. Please check README.md for information about not configuring baseVersion. 2. Set a valid baseVersion.`,
+    );
+  }
+
+  // if function is not in specific version of service, it should reject and let user change the yaml.
+  if (!(await helper.isFunctionExistedInBaseVersion(functionName, baseVersionArgs, serviceName))) {
+    await exceptionHelper.throwAndNotifyError(
+      `Function: [${functionName}] doesn't exist in service: [${serviceName}] of version [${baseVersionArgs}]. Please do not set baseVersion in the yaml and retry to have a full release.`,
     );
   }
 }
