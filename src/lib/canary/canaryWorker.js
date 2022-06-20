@@ -44,13 +44,17 @@ class CanaryWorker {
             job.weight,
           );
         }
-        await this.functionHelper.updateTriggerListByAlias(triggers, functionName, alias, service);
-        await this.functionHelper.updateCustomDomainListByAlias(
-          service,
-          customDomainList,
-          alias,
-          functionName,
-        );
+        if (triggers != undefined && triggers.length != 0) {
+          await this.functionHelper.updateTriggerListByAlias(triggers, functionName, alias, service);
+        }
+        if (customDomainList != undefined && customDomainList.length != 0) {
+          await this.functionHelper.updateCustomDomainListByAlias(
+            service,
+            customDomainList,
+            alias,
+            functionName,
+          );
+        }
       } else {
         // update alias
         await this.functionHelper.updateAlias(

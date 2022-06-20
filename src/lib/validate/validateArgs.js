@@ -19,6 +19,12 @@ async function validateParams(logger, params, exceptionHelper) {
   if (params.customDomainList.constructor.name !== 'Array') {
     await exceptionHelper.throwAndNotifyError(`Failed to parse custom domains.`);
   }
+  if (params.triggers.constructor.name !== 'Array') {
+    await exceptionHelper.throwAndNotifyError(`Failed to parse triggers.`);
+  }
+  if (params.triggers.length == 0) {
+    await exceptionHelper.throwAndNotifyError(`No triggers found, you can't do a canary release without a trigger.`);
+  }
 }
 
 /**
@@ -233,7 +239,7 @@ async function validateBaseVersion(
   // if function is not in specific version of service, it should reject and let user change the yaml.
   if (!(await helper.isFunctionExistedInBaseVersion(functionName, baseVersionArgs, serviceName))) {
     await exceptionHelper.throwAndNotifyError(
-      `Function: [${functionName}] doesn't exist in service: [${serviceName}] of version [${baseVersionArgs}]. Please do not set baseVersion in the yaml and retry to have a full release.`,
+      `Function: [${functionName}] doesn't exist in service: [${serviceName}] of version [${baseVersionArgs}]. There are two solutions: 1. Do not set a baseVersion in the yaml and retry to have a full release. 2. Set a valid baseVersion that contains the function [${functionName}] and retry. `,
     );
   }
 }

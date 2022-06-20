@@ -42,13 +42,15 @@ async function singleFunc(inputs, args) {
   const functionName = inputs.props && inputs.props.function && inputs.props.function.name;
   const serviceName = inputs.props && inputs.props.service && inputs.props.service.name;
   const { triggers = [] } = inputs.props;
-
   // TODO 会不会上个post插件删除inputs.output导致我这里拿不到custom domain
-  const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
-
+  let customDomainList = [];
+  if (inputs.output && inputs.output.url) {
+    const { custom_domain = [] } = inputs.output && inputs.output.url;
+    customDomainList = custom_domain;
+  }
   const { baseVersion, description = '', alias: aliasName = `${functionName}_stable` } = args;
 
-  const params = { functionName, serviceName, customDomainList };
+  const params = { functionName, serviceName, customDomainList, triggers };
 
   await validateParams(logger, params, exceptionHelper);
 
@@ -121,7 +123,9 @@ async function singleFunc(inputs, args) {
       !(await functionHelper.isFunctionExistedInBaseVersion(functionName, baseVersion, serviceName))
     ) {
       // start full release
-      logger.warn(`Function: [${functionName}] doesn't exist in service: [${serviceName}] of base version [${baseVersion}], there will be a full release.`)
+      logger.warn(
+        `Function: [${functionName}] doesn't exist in service: [${serviceName}] of base version [${baseVersion}], there will be a full release.`,
+      );
       const plan = fullyReleaseHelper(
         getAliasResponse,
         functionHelper,
