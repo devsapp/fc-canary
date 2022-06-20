@@ -308,7 +308,7 @@ class FunctionHelper {
       }
     } catch (e) {
       await this.exceptionHelper.throwAndNotifyError(
-        `List triggers error: Error code: [${e.code}], error message: [${e.message}]`,
+        `List triggers error, Error code: [${e.code}], error message: [${e.message}]`,
       );
     }
     return triggers;
