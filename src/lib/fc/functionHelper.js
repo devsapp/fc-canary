@@ -450,6 +450,9 @@ class FunctionHelper {
       if (response.body.functionName == functionName) {
         return true;
       }
+      await this.exceptionHelper.throwAndNotifyError(
+        `Failed to check whether function [${functionName}] is in service [${serviceName}] of baseVersion [${baseVersion}]: function name is different from that in response. `,
+      );
       return false;
     } catch (e) {
       if (e.message.indexOf('FunctionNotFound') !== -1) {
