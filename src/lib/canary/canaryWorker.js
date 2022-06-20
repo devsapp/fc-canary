@@ -45,7 +45,14 @@ class CanaryWorker {
           );
         }
 
-        await this.functionHelper.updateTriggerListByAlias(triggers, functionName, alias, service);
+        if (triggers != undefined && triggers.length != 0) {
+          await this.functionHelper.updateTriggerListByAlias(
+            triggers,
+            functionName,
+            alias,
+            service,
+          );
+        }
         if (customDomainList != undefined && customDomainList.length != 0) {
           await this.functionHelper.updateCustomDomainListByAlias(
             service,

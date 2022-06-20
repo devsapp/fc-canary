@@ -5,7 +5,9 @@ const {
   PublishServiceVersionRequest,
   ListServiceVersionsRequest,
   UpdateTriggerRequest,
-  UpdateCustomDomainRequest, GetFunctionRequest,
+  UpdateCustomDomainRequest,
+  GetFunctionRequest,
+  ListTriggersRequest,
 } = require('@alicloud/fc-open20210406');
 const Client = require('@alicloud/fc-open20210406').default;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -59,7 +61,7 @@ class FunctionHelper {
       this.logger.debug(`Publish version response: ${JSON.stringify(response, null, 2)}.`);
     } catch (e) {
       await this.exceptionHelper.throwAndNotifyError(
-        `Error code: [${e.code}], error message: [${e.message}]`,
+        `Publish version error, Error code: [${e.code}], error message: [${e.message}]`,
       );
     }
 
@@ -170,7 +172,7 @@ class FunctionHelper {
       this.logger.debug(`Create alias response: ${JSON.stringify(createAliasResponse, null, 2)}.`);
     } catch (e) {
       await this.exceptionHelper.throwAndNotifyError(
-        `Error code: [${e.code}], error message: [${e.message}]`,
+        `Create alias error, Error code: [${e.code}], error message: [${e.message}]`,
       );
     }
 
@@ -217,7 +219,7 @@ class FunctionHelper {
       this.logger.debug(`Update alias response: ${JSON.stringify(updateAliasResponse, null, 2)}.`);
     } catch (e) {
       await this.exceptionHelper.throwAndNotifyError(
-        `Error code: [${e.code}], error message: [${e.message}]`,
+        `Update alias error, Error code: [${e.code}], error message: [${e.message}]`,
       );
     }
     if (updateAliasResponse == undefined || updateAliasResponse.body == undefined) {
@@ -257,11 +259,75 @@ class FunctionHelper {
         // do nothing
       } else {
         await this.exceptionHelper.throwAndNotifyError(
-          `Error code: [${e.code}], error message: [${e.message}]`,
+          `Get alias error, Error code: [${e.code}], error message: [${e.message}]`,
         );
       }
     }
     return getAliasResponse;
+  }
+
+
+  async listTriggers(functionName, serviceName) {
+    let triggers = [];
+    let nextToken = undefined;
+    let request = new ListTriggersRequest({limit: 100});
+    try {
+      const response = await this.retry("listTriggers", serviceName, functionName, request);
+      if (
+        response == undefined ||
+        response.body == undefined ||
+        response.body.triggers == undefined ||
+        response.body.triggers.constructor.name != 'Array'
+      ) {
+        await this.exceptionHelper.throwAndNotifyError(
+          `Failed to list triggers from service: [${serviceName}], functionName: [${functionName}]. Please contact staff.`,
+        );
+      }
+      nextToken = response.body.nextToken
+      _.each(response.body.triggers, function (item, index) {
+        triggers.push(item);
+      });
+      while (nextToken != undefined) {
+
+        let request = new ListTriggersRequest({limit: 100, nextToken: nextToken});
+        const response = await this.retry("listTriggers", serviceName, functionName, request);
+        if (
+          response == undefined ||
+          response.body == undefined ||
+          response.body.triggers == undefined ||
+          response.body.triggers.constructor.name != 'Array'
+        ) {
+          await this.exceptionHelper.throwAndNotifyError(
+            `Failed to list triggers from service: [${serviceName}], functionName: [${functionName}]. Please contact staff.`,
+          );
+        }
+        _.each(response.body.triggers, function (item, index) {
+          triggers.push(item);
+        });
+        nextToken = response.body.nextToken;
+      }
+    } catch (e) {
+      await this.exceptionHelper.throwAndNotifyError(
+        `List triggers error: Error code: [${e.code}], error message: [${e.message}]`,
+      );
+    }
+    return triggers;
+  }
+
+
+  async deleteTriggerBelongsToAlias(functionName, alias, serviceName) {
+    let triggers = await this.listTriggers(functionName, serviceName);
+    for (const item of triggers) {
+      if (item.qualifier == alias) {
+        try {
+          await this.retry('deleteTrigger', serviceName, functionName, item.triggerName)
+        } catch (e) {
+          await this.exceptionHelper.throwAndNotifyError(
+            `Delete trigger error, Error code: [${e.code}], error message: [${e.message}]`,
+          );
+        }
+      }
+    }
   }
 
   async updateTriggerListByAlias(triggers, functionName, aliasName, serviceName) {
@@ -269,7 +335,7 @@ class FunctionHelper {
     for (const item of triggers) {
       let response;
       try {
-        const request = new UpdateTriggerRequest({ qualifier: aliasName });
+        const request = new UpdateTriggerRequest({qualifier: aliasName});
 
         this.logger.debug(
           `Update Trigger Alias: serviceName: [${serviceName}],` +
@@ -281,7 +347,7 @@ class FunctionHelper {
         this.logger.debug(`Update trigger response: ${JSON.stringify(response, null, 2)}.`);
       } catch (e) {
         await this.exceptionHelper.throwAndNotifyError(
-          `Error code: [${e.code}], error message: [${e.message}]`,
+          `Update triggers error, Error code: [${e.code}], error message: [${e.message}]`,
         );
       }
       if (
@@ -330,7 +396,7 @@ class FunctionHelper {
         response = await this.retry('getCustomDomain', domainName);
       } catch (e) {
         await this.exceptionHelper.throwAndNotifyError(
-          `Error code: [${e.code}], error message: [${e.message}]`,
+          `Get custom domain error, Error code: [${e.code}], error message: [${e.message}]`,
         );
       }
       this.logger.debug(`Get custom domain response: ${JSON.stringify(response, null, 2)}.`);
@@ -376,7 +442,7 @@ class FunctionHelper {
         );
       } catch (e) {
         await this.exceptionHelper.throwAndNotifyError(
-          `Error code: [${e.code}], error message: [${e.message}]`,
+          `Update custom domain error, Error code: [${e.code}], error message: [${e.message}]`,
         );
       }
 
@@ -429,7 +495,7 @@ class FunctionHelper {
       return response;
     } catch (e) {
       await this.exceptionHelper.throwAndNotifyError(
-        `Error code: [${e.code}], error message: [${e.message}]`,
+        `List version error, Error code: [${e.code}], error message: [${e.message}]`,
       );
     }
   }
@@ -459,7 +525,7 @@ class FunctionHelper {
         return false;
       } else {
         await this.exceptionHelper.throwAndNotifyError(
-          `Error code: [${e.code}], error message: [${e.message}]`,
+          `Get function error, Error code: [${e.code}], error message: [${e.message}]`,
         );
       }
     }

@@ -22,8 +22,8 @@ async function validateParams(logger, params, exceptionHelper) {
   if (params.triggers.constructor.name !== 'Array') {
     await exceptionHelper.throwAndNotifyError(`Failed to parse triggers.`);
   }
-  if (params.triggers.length == 0) {
-    await exceptionHelper.throwAndNotifyError(`No triggers found, you can't do a canary release without a trigger.`);
+  if (params.triggers.length == 0 && params.customDomainList.length != 0) {
+    await exceptionHelper.throwAndNotifyError(`Using custom domain must config http trigger.`);
   }
 }
 
