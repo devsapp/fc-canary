@@ -8,6 +8,6 @@ exports.initializer = (context, callback) => {
 };
 */
 exports.handler = (event, context, callback) => {
-    console.log('hello world');
-    callback(null, 'hello world');
+    console.log('hello world new');
+    callback(null, 'hello world new');
 }
