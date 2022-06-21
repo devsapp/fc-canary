@@ -90,13 +90,6 @@ async function singleFunc(inputs, args) {
       getAliasResponse == undefined ? "doesn't exist, and we will create it soon" : 'exists'
     }.`,
   );
-  if (getAliasResponse != undefined) {
-    // we must delete triggers that belong to the existing alias.
-    await functionHelper.deleteTriggerBelongsToAlias(functionName, aliasName, serviceName);
-    logger.info(
-      `Successfully deleted triggers in the existing alias: [${aliasName}]`,
-    );
-  }
   logger.debug(`Begin to publish a new version, serviceName: [${serviceName}].`);
   const canaryVersion = await functionHelper.publishVersion(serviceName, description);
   logger.info(`Successfully published the version: [${canaryVersion}].`);

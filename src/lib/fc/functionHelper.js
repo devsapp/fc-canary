@@ -7,7 +7,6 @@ const {
   UpdateTriggerRequest,
   UpdateCustomDomainRequest,
   GetFunctionRequest,
-  ListTriggersRequest,
 } = require('@alicloud/fc-open20210406');
 const Client = require('@alicloud/fc-open20210406').default;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -264,70 +263,6 @@ class FunctionHelper {
       }
     }
     return getAliasResponse;
-  }
-
-
-  async listTriggers(functionName, serviceName) {
-    let triggers = [];
-    let nextToken = undefined;
-    let request = new ListTriggersRequest({limit: 100});
-    try {
-      const response = await this.retry("listTriggers", serviceName, functionName, request);
-      if (
-        response == undefined ||
-        response.body == undefined ||
-        response.body.triggers == undefined ||
-        response.body.triggers.constructor.name != 'Array'
-      ) {
-        await this.exceptionHelper.throwAndNotifyError(
-          `Failed to list triggers from service: [${serviceName}], functionName: [${functionName}]. Please contact staff.`,
-        );
-      }
-      nextToken = response.body.nextToken
-      _.each(response.body.triggers, function (item, index) {
-        triggers.push(item);
-      });
-      while (nextToken != undefined) {
-
-        let request = new ListTriggersRequest({limit: 100, nextToken: nextToken});
-        const response = await this.retry("listTriggers", serviceName, functionName, request);
-        if (
-          response == undefined ||
-          response.body == undefined ||
-          response.body.triggers == undefined ||
-          response.body.triggers.constructor.name != 'Array'
-        ) {
-          await this.exceptionHelper.throwAndNotifyError(
-            `Failed to list triggers from service: [${serviceName}], functionName: [${functionName}]. Please contact staff.`,
-          );
-        }
-        _.each(response.body.triggers, function (item, index) {
-          triggers.push(item);
-        });
-        nextToken = response.body.nextToken;
-      }
-    } catch (e) {
-      await this.exceptionHelper.throwAndNotifyError(
-        `List triggers error, Error code: [${e.code}], error message: [${e.message}]`,
-      );
-    }
-    return triggers;
-  }
-
-
-  async deleteTriggerBelongsToAlias(functionName, alias, serviceName) {
-    let triggers = await this.listTriggers(functionName, serviceName);
-    for (const item of triggers) {
-      if (item.qualifier == alias) {
-        try {
-          await this.retry('deleteTrigger', serviceName, functionName, item.triggerName)
-        } catch (e) {
-          await this.exceptionHelper.throwAndNotifyError(
-            `Delete trigger error, Error code: [${e.code}], error message: [${e.message}]`,
-          );
-        }
-      }
-    }
   }
 
   async updateTriggerListByAlias(triggers, functionName, aliasName, serviceName) {
