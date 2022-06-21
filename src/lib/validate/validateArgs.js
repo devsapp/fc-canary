@@ -23,7 +23,7 @@ async function validateParams(logger, params, exceptionHelper) {
     await exceptionHelper.throwAndNotifyError(`Failed to parse triggers.`);
   }
   if (params.triggers.length == 0 && params.customDomainList.length != 0) {
-    await exceptionHelper.throwAndNotifyError(`Using custom domain must config http trigger.`);
+    await exceptionHelper.throwAndNotifyError(`Using custom domain must also use a http trigger.`);
   }
 }
 
