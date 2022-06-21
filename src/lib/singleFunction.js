@@ -42,13 +42,15 @@ async function singleFunc(inputs, args) {
   const functionName = inputs.props && inputs.props.function && inputs.props.function.name;
   const serviceName = inputs.props && inputs.props.service && inputs.props.service.name;
   const { triggers = [] } = inputs.props;
-
   // TODO 会不会上个post插件删除inputs.output导致我这里拿不到custom domain
-  const { custom_domain: customDomainList = [] } = inputs.output && inputs.output.url;
-
+  let customDomainList = [];
+  if (inputs.output && inputs.output.url) {
+    const { custom_domain = [] } = inputs.output && inputs.output.url;
+    customDomainList = custom_domain;
+  }
   const { baseVersion, description = '', alias: aliasName = `${functionName}_stable` } = args;
 
-  const params = { functionName, serviceName, customDomainList };
+  const params = { functionName, serviceName, customDomainList, triggers };
 
   await validateParams(logger, params, exceptionHelper);
 
@@ -75,14 +77,11 @@ async function singleFunc(inputs, args) {
       functionHelper,
       logger,
       exceptionHelper,
+      functionName,
     );
   }
 
   logger.info('Successfully checked args, inputs and canary policy.');
-
-  logger.debug(`Begin to publish a new version, serviceName: [${serviceName}].`);
-  const canaryVersion = await functionHelper.publishVersion(serviceName, description);
-  logger.info(`Successfully published the version: [${canaryVersion}].`);
 
   logger.debug(`Begin to check the existence of alias: [${aliasName}].`);
   const getAliasResponse = await functionHelper.getAlias(serviceName, aliasName);
@@ -91,6 +90,9 @@ async function singleFunc(inputs, args) {
       getAliasResponse == undefined ? "doesn't exist, and we will create it soon" : 'exists'
     }.`,
   );
+  logger.debug(`Begin to publish a new version, serviceName: [${serviceName}].`);
+  const canaryVersion = await functionHelper.publishVersion(serviceName, description);
+  logger.info(`Successfully published the version: [${canaryVersion}].`);
 
   if (policy.key === 'full') {
     const plan = fullyReleaseHelper(
@@ -115,6 +117,30 @@ async function singleFunc(inputs, args) {
       canaryVersion,
       getAliasResponse,
     );
+    // if function is not in specific version of service, it should have a full release
+    if (
+      !(await functionHelper.isFunctionExistedInBaseVersion(functionName, baseVersion, serviceName))
+    ) {
+      // start full release
+      logger.warn(
+        `Function: [${functionName}] doesn't exist in service: [${serviceName}] of base version [${baseVersion}], there will be a full release.`,
+      );
+      const plan = fullyReleaseHelper(
+        getAliasResponse,
+        functionHelper,
+        serviceName,
+        description,
+        canaryVersion,
+        aliasName,
+        triggers,
+        functionName,
+        customDomainList,
+      );
+      const worker = new CanaryWorker(logger, plan, functionHelper, notificationHelper);
+      await worker.doJobs();
+      return;
+    }
+
     if (policy.key === 'canaryWeight') {
       const plan = canaryWeightHelper(
         getAliasResponse,

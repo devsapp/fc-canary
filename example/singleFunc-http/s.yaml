@@ -4,7 +4,7 @@ access: 'mac0307' #  秘钥别名
 
 
 services:
-  dummy-function:
+  test1:
     component: devsapp/fc
     actions:
       post-deploy: # 在deploy之后运行
@@ -14,30 +14,30 @@ services:
               - dingTalkRobot:
                   accessToken: xxx
                   secret: xxx
-                  atUserIds:
-                    - xxx
+#                  atUserIds:
+#                    - xxx
 #                  atMobiles:
 #                    - xxx
 #                  isAtAll: false
 #            alias: test3
-#            baseVersion: 13
-            description: '1231xx23'
+#            baseVersion: 2
+#            description: '1231xx23'
 #            canaryStep:
 #              weight: 40
 #              interval: 1
-#            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
-            canaryPlans: #自定义灰度
-              - weight: 1
-                interval: 1
-              - weight: 30
-                interval: 1
-              - weight: 40
-                interval: 1
+            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
+#            canaryPlans: #自定义灰度
+#              - weight: 1
+#                interval: 1
+#              - weight: 30
+#                interval: 1
+#              - weight: 40
+#                interval: 1
 #            linearStep:
 #              weight: 40
 #              interval: 1
     props:
-      region: cn-beijing
+      region: cn-hangzhou
       service:
         name: prodTest
         logConfig: auto
@@ -48,7 +48,7 @@ services:
         memorySize: 1024
         runtime: nodejs12
         timeout: 60
-        name: dummy-function
+        name: test-function
         codeUri: ./code
       triggers:
         - name: httpTrigger
@@ -62,15 +62,15 @@ services:
           protocol: HTTP
           routeConfigs:
             - path: '/*'
-        - domainName: vuepress.website.1816647648916833.cn-beijing.fc.devsapp.net
-          protocol: HTTP
-          routeConfigs:
-            - path: '/index'
-              serviceName: prodTest
-              functionName: dummy-function
-            - path: '/cat'
-              serviceName: test-fully
-              functionName: dummy-function
+#        - domainName: vuepress.website.1816647648916833.cn-hangzhou.fc.devsapp.net
+#          protocol: HTTP
+#          routeConfigs:
+#            - path: '/index'
+#              serviceName: prodTest
+#              functionName: dummy-function
+#            - path: '/cat'
+#              serviceName: test-fully
+#              functionName: dummy-function
 
 
 

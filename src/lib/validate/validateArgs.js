@@ -19,6 +19,12 @@ async function validateParams(logger, params, exceptionHelper) {
   if (params.customDomainList.constructor.name !== 'Array') {
     await exceptionHelper.throwAndNotifyError(`Failed to parse custom domains.`);
   }
+  if (params.triggers.constructor.name !== 'Array') {
+    await exceptionHelper.throwAndNotifyError(`Failed to parse triggers.`);
+  }
+  if (params.triggers.length == 0 && params.customDomainList.length != 0) {
+    await exceptionHelper.throwAndNotifyError(`Using custom domain must also use a http trigger.`);
+  }
 }
 
 /**
@@ -195,7 +201,14 @@ async function parseCanaryPolicy(args, logger, exceptionHelper) {
  * @param exceptionHelper
  * @returns {Promise<void>}
  */
-async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger, exceptionHelper) {
+async function validateBaseVersion(
+  serviceName,
+  baseVersionArgs,
+  helper,
+  logger,
+  exceptionHelper,
+  functionName,
+) {
   try {
     assert(
       !isNaN(baseVersionArgs) &&
@@ -220,6 +233,13 @@ async function validateBaseVersion(serviceName, baseVersionArgs, helper, logger,
   ) {
     await exceptionHelper.throwAndNotifyError(
       `BaseVersion: [${baseVersionArgs}] doesn't exists in service: [${serviceName}]. There are two solutions: 1. Do not set baseVersion. Please check README.md for information about not configuring baseVersion. 2. Set a valid baseVersion.`,
+    );
+  }
+
+  // if function is not in specific version of service, it should reject and let user change the yaml.
+  if (!(await helper.isFunctionExistedInBaseVersion(functionName, baseVersionArgs, serviceName))) {
+    await exceptionHelper.throwAndNotifyError(
+      `Function: [${functionName}] doesn't exist in service: [${serviceName}] of version [${baseVersionArgs}]. There are two solutions: 1. Do not set a baseVersion in the yaml and retry to have a full release. 2. Set a valid baseVersion that contains the function [${functionName}] and retry. `,
     );
   }
 }
