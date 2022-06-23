@@ -1,19 +1,21 @@
 edition: 1.0.0 #  命令行YAML规范版本，遵循语义化版本（Semantic Versioning）规范
 name: demo-app #  项目名称
-access: 'mac0307' #  秘钥别名
-
-
+# access 是当前应用所需要的密钥信息配置：
+# 密钥配置可以参考：https://www.serverless-devs.com/serverless-devs/command/config
+# 密钥使用顺序可以参考：https://www.serverless-devs.com/serverless-devs/tool#密钥使用顺序与规范
+access: 'xxx' #  秘钥别名
 services:
   test1:
     component: devsapp/fc
     actions:
       post-deploy: # 在deploy之后运行
-        - plugin: ${path(../..)}
+        - plugin: fc-canary
           args:
             notification:
               - dingTalkRobot:
-                  accessToken: xxx
-                  secret: xxx
+                  # 配置见 https://github.com/devsapp/fc-canary
+#                  accessToken: xxx
+#                  secret: xxx
 #                  atUserIds:
 #                    - xxx
 #                  atMobiles:
@@ -25,7 +27,7 @@ services:
 #            canaryStep:
 #              weight: 40
 #              interval: 1
-            canaryWeight:  10 #手动灰度，指定时直接将灰度版本设置对应的权重
+            canaryWeight:  50 #手动灰度，指定时直接将灰度版本设置对应的权重
 #            canaryPlans: #自定义灰度
 #              - weight: 1
 #                interval: 1
@@ -39,7 +41,7 @@ services:
     props:
       region: cn-hangzhou
       service:
-        name: prodTest
+        name: canary-test
         logConfig: auto
         nasConfig: auto
       function:
@@ -61,16 +63,7 @@ services:
         - domainName: auto
           protocol: HTTP
           routeConfigs:
-            - path: '/*'
-#        - domainName: vuepress.website.1816647648916833.cn-hangzhou.fc.devsapp.net
-#          protocol: HTTP
-#          routeConfigs:
-#            - path: '/index'
-#              serviceName: prodTest
-#              functionName: dummy-function
-#            - path: '/cat'
-#              serviceName: test-fully
-#              functionName: dummy-function
+            - path: '/'
 
 
 
