@@ -11,9 +11,9 @@ services:
       post-deploy: # 在deploy之后运行
         - plugin: fc-canary
           args:
-            notification:
-              - dingTalkRobot:
-                  # 配置见 https://github.com/devsapp/fc-canary
+#            notification:
+#              - dingTalkRobot:
+#                  配置见 https://github.com/devsapp/fc-canary
 #                  accessToken: xxx
 #                  secret: xxx
 #                  atUserIds:
@@ -23,12 +23,12 @@ services:
 #                  isAtAll: false
 #            alias: test3
 #            baseVersion: 2
-#            description: '1231xx23'
+#            description: 'xxx'
 #            canaryStep:
 #              weight: 40
 #              interval: 1
             canaryWeight:  50 #手动灰度，指定时直接将灰度版本设置对应的权重
-#            canaryPlans: #自定义灰度
+#            canaryPlans:
 #              - weight: 1
 #                interval: 1
 #              - weight: 30
