@@ -11,9 +11,9 @@ services:
       post-deploy: # 在deploy之后运行
         - plugin: fc-canary
           args:
-            notification:
-              - dingTalkRobot:
-                  # 配置见 https://github.com/devsapp/fc-canary
+#            notification:
+#              - dingTalkRobot:
+#                  配置见 https://github.com/devsapp/fc-canary
 #                  accessToken: xxx
 #                  secret: xxx
 #                  atUserIds:
