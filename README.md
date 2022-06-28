@@ -18,20 +18,20 @@
 
 ```yaml
 actions:
-  post-deploy: # 在deploy之后运行
+  post-deploy: 
     - plugin: fc-canary
       args:
-        description: 'test canary'
-        baseVersion: 1 #基线版本，如果指定则使用该版本做为主版本和灰度版本进行切换
-        canaryStep: # 灰度20%流量，10分钟后灰度剩余80%流量
+        description: 'test canary' 
+        baseVersion: 1            
+        canaryStep: 
           weight: 20
           interval: 10
-        # canaryWeight: 10 #手动灰度，指定时直接将灰度版本设置对应的权重
-        # canaryPlans: #自定义灰度
+        # canaryWeight: 10
+        # canaryPlans:
         #   - weight: 10
-        #     intervalMinutes: 5
+        #     interval: 5
         #   - weight: 30
-        #     intervalMinutes: 10
+        #     interval: 10
         # linearStep:
         #   weight: 20
         #   interval: 1
