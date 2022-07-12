@@ -12,7 +12,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: "3.x"
       - uses: actions/setup-node@v1
         with:
           node-version: 12
@@ -21,9 +21,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install setuptools wheel twine
           pip install requests
-      - name: NPM install
-        run: |
-          npm install --production
       - name: Add publish file
         run: |
           wget https://serverless-registry.oss-cn-hangzhou.aliyuncs.com/publish-file/python3/hub-publish.py
